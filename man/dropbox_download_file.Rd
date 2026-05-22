@@ -24,7 +24,7 @@ Invisibly het lokale pad (\code{local_path}) als character string.
 Wordt aangeroepen voor zijn neveneffect (bestand schrijven naar schijf).
 }
 \description{
-Downloadt één bestand rechtstreeks via de Dropbox API v2, onafhankelijk van
+Downloadt een bestand rechtstreeks via de Dropbox API v2, onafhankelijk van
 de Dropbox desktop client en diens sync-wachtrij. Nuttig wanneer een bestand
 direct beschikbaar moet zijn zonder te wachten op synchronisatie.
 }
@@ -41,12 +41,11 @@ functie een fout met de volledige API-foutmelding als bericht.
 Maak een Dropbox app aan op \url{https://www.dropbox.com/developers/apps}
 met \verb{Full Dropbox} scope. Vink onder \code{Permissions} de scope
 \code{files.content.read} aan. Genereer daarna een token onder \code{Settings}.
-Sla het token op als omgevingsvariabele via \code{Sys.setenv(DROPBOX_TOKEN = "...")}.
 }
 
 \examples{
 \dontrun{
-token <- Sys.getenv("DROPBOX_TOKEN")  # token bij voorkeur uit omgevingsvariabele
+token <- dropbox_token()
 
 # Enkelvoudig bestand downloaden
 dropbox_download_file(

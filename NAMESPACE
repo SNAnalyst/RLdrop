@@ -2,6 +2,8 @@
 
 export(dropbox_download_file)
 export(dropbox_download_folder)
+export(dropbox_download_folder_zip)
+export(dropbox_download_zip)
 export(dropbox_token)
 export(dropbox_upload)
 export(dropbox_upload_file)

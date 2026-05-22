@@ -22,7 +22,7 @@ uit de omgevingsvariabele \code{DROPBOX_APP_SECRET}.}
 gelezen uit de omgevingsvariabele \code{DROPBOX_REFRESH_TOKEN}. De refresh
 token verloopt niet en kan herhaaldelijk worden gebruikt.}
 
-\item{margin}{Aantal seconden vóór de officiële vervaltijd waarop het token
+\item{margin}{Aantal seconden voor de officiele vervaltijd waarop het token
 al als verlopen wordt beschouwd. Standaard 300 seconden (5 minuten) als
 buffer voor klokverschillen en langlopende aanroepen.}
 }
@@ -77,10 +77,10 @@ token <- dropbox_token()
 # Volgende aanroepen binnen ~4 uur: geeft gecached token terug
 token <- dropbox_token()
 
-# Direct gebruiken — token wordt automatisch opgehaald of gecached teruggegeven
+# Direct gebruiken - token wordt automatisch opgehaald of gecached teruggegeven
 dropbox_download_file("/data/bestand.parquet", "D:/lokaal/bestand.parquet", dropbox_token())
 
-# Token cachen in variabele voor meerdere aanroepen in één script
+# Token cachen in variabele voor meerdere aanroepen in een script
 token <- dropbox_token()
 dropbox_download_file("/data/a.parquet", "D:/lokaal/a.parquet", token)
 dropbox_download_file("/data/b.parquet", "D:/lokaal/b.parquet", token)

@@ -13,9 +13,7 @@ Moet beginnen met \code{/}. Gebruik \code{""} voor de root van je Dropbox.}
 \item{local_folder}{Lokaal pad van de doelmap. Wordt aangemaakt als deze
 nog niet bestaat, inclusief bovenliggende mappen.}
 
-\item{token}{Dropbox API access token als character string. Genereer via
-\url{https://www.dropbox.com/developers/apps} onder het tabblad
-\code{Settings} van je app.}
+\item{token}{Dropbox API access token als character string.}
 
 \item{recursive}{Logisch. Indien \code{TRUE}, worden submappen ook gedownload
 en wordt de mapstructuur lokaal gerepliceerd. Standaard \code{FALSE}.}
@@ -26,21 +24,24 @@ bestanden.
 }
 \description{
 Downloadt alle bestanden in een Dropbox-map naar een lokale map. Optioneel
-recursief voor submappen. Mappen met meer dan 2000 bestanden worden
-automatisch gepagineerd afgehandeld.
+recursief voor submappen. Toont een voortgangsbalk tijdens het downloaden.
+Mappen met meer dan 2000 bestanden worden automatisch gepagineerd afgehandeld.
 }
 \details{
-Gebruikt het \verb{/2/files/list_folder} endpoint om de mapinhoud op te halen,
-en roept vervolgens \code{\link[=dropbox_download_file]{dropbox_download_file()}} aan per bestand.
-
-Dropbox pagineert de mapinhoud bij meer dan 2000 items. Deze functie volgt
-automatisch de paginering via \verb{/2/files/list_folder/continue} totdat alle
-items zijn verwerkt.
+De functie werkt in twee fasen:
+\enumerate{
+\item Alle bestandsitems worden eerst volledig geinventariseerd via de
+Dropbox \code{list_folder} API (inclusief paginering bij >2000 items).
+Dit geeft het totaal aantal bestanden zodat de voortgangsbalk correct
+kan worden weergegeven.
+\item De bestanden worden gedownload via \code{\link[=dropbox_download_file]{dropbox_download_file()}} met
+een voortgangsbalk via \code{\link[utils:txtProgressBar]{utils::txtProgressBar()}}.
+}
 
 Bij \code{recursive = TRUE} wordt de volledige mapboomstructuur gerepliceerd in
-\code{local_folder}. Submappen worden aangemaakt als ze nog niet bestaan. De
-recursie verloopt via herhaalde aanroepen van \code{dropbox_download_folder()}
-zelf per submap.
+\code{local_folder}. Paden worden berekend via \code{path_lower} (de door Dropbox
+genormaliseerde lowercase variant) voor consistente vergelijking, en
+submappen worden aangemaakt voor het downloaden begint.
 }
 \section{Foutafhandeling}{
 
@@ -51,13 +52,13 @@ bestandsfouten worden doorgegeven vanuit \code{\link[=dropbox_download_file]{dro
 
 \section{Authenticatie}{
 
-Vereist de scope \code{files.content.read} in je Dropbox app permissions.
-Zie \code{\link[=dropbox_download_file]{dropbox_download_file()}} voor instructies over het aanmaken van een token.
+Vereist de scopes \code{files.content.read} en \code{files.metadata.read} in je
+Dropbox app permissions.
 }
 
 \examples{
 \dontrun{
-token <- Sys.getenv("DROPBOX_TOKEN")
+token <- dropbox_token()
 
 # Platte map downloaden (geen submappen)
 dropbox_download_folder(
@@ -73,10 +74,6 @@ dropbox_download_folder(
   token          = token,
   recursive      = TRUE
 )
-
-# Gedownloade paden opvangen
-paden <- dropbox_download_folder("/data", "D:/lokaal/data", token, recursive = TRUE)
-message(sprintf("\%d bestanden gedownload", length(paden)))
 }
 }
 \seealso{
