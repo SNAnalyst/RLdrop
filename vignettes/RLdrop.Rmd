@@ -1,0 +1,465 @@
+---
+title: "RLdrop: Direct Dropbox API Access vanuit R"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{RLdrop: Direct Dropbox API Access vanuit R}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+## Waarom RLdrop?
+
+De Dropbox desktop client synchroniseert bestanden op de achtergrond, maar
+je hebt geen controle over de volgorde of het moment. Als je vanuit een
+R-script een specifiek bestand nodig hebt — of wilt uploaden — wil je niet
+wachten tot de client klaar is met synchroniseren.
+
+**RLdrop** communiceert rechtstreeks met de Dropbox API v2 via `httr`,
+volledig los van de desktop client. Dit geeft je:
+- On-demand toegang tot specifieke bestanden
+- Controle over upload- en downloadtijdstip
+- Functionaliteit voor bestandsbeheer (verplaatsen, verwijderen, zoeken)
+- Vergelijking tussen lokale en Dropbox-mappen
+
+
+## Stap 1: Dropbox App aanmaken
+
+Voordat je RLdrop kunt gebruiken, heb je een Dropbox App nodig. Dit is een
+eenmalige setup.
+
+1. Ga naar <https://www.dropbox.com/developers/apps>
+2. Klik op **Create app**
+3. Kies **Scoped access**
+4. Kies **Full Dropbox** (toegang tot alle bestanden)
+5. Geef de app een naam (bijv. "RLdrop")
+6. Klik op **Create app**
+
+### Permissions instellen
+
+Na het aanmaken van de app moet je de juiste permissions aanzetten:
+
+1. Ga naar het tabblad **Permissions** van je app
+2. Zet de volgende scopes aan:
+   - `files.metadata.read` — nodig voor list, exists, file_info, compare
+   - `files.metadata.write` — nodig voor move, delete, create_folder
+   - `files.content.read` — nodig voor download
+   - `files.content.write` — nodig voor upload
+3. Klik op **Submit** onderaan de pagina
+
+**Let op:** permissions kunnen alleen gewijzigd worden *voordat* je een
+token genereert. Als je achteraf permissions toevoegt, moet je een nieuw
+refresh token aanvragen.
+
+
+## Stap 2: Refresh token verkrijgen
+
+RLdrop gebruikt een **refresh token** in plaats van een kort-levend access
+token. Een refresh token verloopt niet en wordt automatisch gebruikt om
+steeds een nieuw access token op te halen wanneer dat nodig is.
+
+### App Key en App Secret ophalen
+
+1. Ga naar het tabblad **Settings** van je app
+2. Noteer de **App key** en **App secret** (klik op "Show" om het secret
+   te zien)
+
+### Autorisatiecode ophalen
+
+Open een browser en ga naar de volgende URL (vervang `JOUW_APP_KEY` door
+je eigen App key):
+
+```
+https://www.dropbox.com/oauth2/authorize?client_id=JOUW_APP_KEY&response_type=code&token_access_type=offline
+```
+
+De parameter `token_access_type=offline` is essentieel — dit zorgt ervoor
+dat je een **refresh token** krijgt in plaats van alleen een kort-levend
+access token.
+
+1. Log in bij Dropbox (als je dat nog niet bent)
+2. Klik op **Continue** en **Allow**
+3. Je krijgt een **autorisatiecode** te zien — kopieer deze
+
+### Autorisatiecode omwisselen voor refresh token
+
+Voer het volgende uit in R (vervang de drie waarden door je eigen gegevens):
+
+```{r refresh-token}
+# Eenmalig uitvoeren om je refresh token te verkrijgen
+response <- httr::POST(
+  "https://api.dropbox.com/oauth2/token",
+  body = list(
+    code       = "JOUW_AUTORISATIECODE",
+    grant_type = "authorization_code"
+  ),
+  httr::authenticate("JOUW_APP_KEY", "JOUW_APP_SECRET"),
+  encode = "form"
+)
+
+resultaat <- httr::content(response)
+
+# Dit is je refresh token — sla dit veilig op!
+resultaat$refresh_token
+```
+
+**Belangrijk:** de autorisatiecode is eenmalig bruikbaar. Als je een fout
+krijgt, ga dan terug naar de browser-stap en genereer een nieuwe code.
+
+
+## Stap 3: Credentials opslaan
+
+Sla de drie credentials op als omgevingsvariabelen in je `.Renviron`
+bestand zodat ze nooit in je code staan:
+
+```{r renviron}
+# Opent het .Renviron bestand in je editor
+usethis::edit_r_environ()
+```
+
+Voeg de volgende regels toe:
+
+```
+DROPBOX_APP_KEY=jouw_app_key
+DROPBOX_APP_SECRET=jouw_app_secret
+DROPBOX_REFRESH_TOKEN=jouw_refresh_token
+```
+
+**Herstart R** na het opslaan. Je kunt controleren of de variabelen
+correct zijn ingesteld:
+
+```{r check-env}
+nchar(Sys.getenv("DROPBOX_APP_KEY")) > 0
+nchar(Sys.getenv("DROPBOX_APP_SECRET")) > 0
+nchar(Sys.getenv("DROPBOX_REFRESH_TOKEN")) > 0
+```
+
+## Stap 4: Verbinding testen
+
+```{r test-token}
+library(RLdrop)
+
+# Eerste aanroep haalt een nieuw access token op via de Dropbox API
+token <- dropbox_token()
+# [DROPBOX] Nieuw access token ophalen...
+# [DROPBOX] Nieuw token opgehaald, geldig tot 14:32:10
+
+# Volgende aanroepen binnen ~4 uur geven het gecachede token terug
+token <- dropbox_token()
+# [DROPBOX] Geldig gecached token gebruikt
+```
+
+Alle functies in RLdrop gebruiken `token = dropbox_token()` als standaard,
+dus in de praktijk hoef je het token niet handmatig op te halen — het
+gebeurt automatisch.
+
+
+## Bestanden downloaden
+
+### Enkel bestand
+
+```{r download-file}
+# Download een bestand naar een lokaal pad
+dropbox_download_file(
+  dropbox_path = "/data/rapport.xlsx",
+  local_path   = "D:/lokaal/rapport.xlsx"
+)
+
+# Resultaat opvangen en direct inlezen
+pad <- dropbox_download_file("/data/settings.rds", tempfile(fileext = ".rds"))
+config <- readRDS(pad)
+```
+
+### Volledige map
+
+```{r download-folder}
+# Platte map (geen submappen)
+dropbox_download_folder(
+  dropbox_folder = "/data/parquet",
+  local_folder   = "D:/lokaal/parquet"
+)
+
+# Inclusief submappen
+dropbox_download_folder(
+  dropbox_folder = "/projecten/2026",
+  local_folder   = "D:/lokaal/projecten/2026",
+  recursive      = TRUE
+)
+```
+
+### Snelle download via zip
+
+Voor grote mappen is de zip-methode aanzienlijk sneller dan per-bestand
+downloaden:
+
+```{r download-zip}
+# Enkele map als zip (max 10.000 bestanden / 20GB)
+dropbox_download_zip(
+  dropbox_folder = "/data/parquet/year=2024",
+  local_folder   = "D:/lokaal/parquet/year=2024"
+)
+
+# Grote map: automatisch per submap als aparte zip
+dropbox_download_folder_zip(
+  dropbox_folder = "/Datasets/groot",
+  local_folder   = "D:/lokaal/groot"
+)
+```
+
+
+## Bestanden uploaden
+
+```{r upload}
+# Enkel bestand (automatische keuze: gewoon of chunked bij >140MB)
+dropbox_upload("D:/data/rapport.xlsx", "/data/rapport.xlsx")
+
+# Hele map uploaden, inclusief submappen
+dropbox_upload_folder(
+  local_folder   = "D:/output",
+  dropbox_folder = "/output",
+  recursive      = TRUE
+)
+```
+
+Bestanden groter dan 140MB worden automatisch via een chunked upload
+session verstuurd. Je kunt de drempel aanpassen:
+
+```{r upload-large}
+# Chunked upload al vanaf 50MB
+dropbox_upload(
+  local_path           = "D:/data/groot.csv",
+  dropbox_path         = "/data/groot.csv",
+  large_file_threshold = 50 * 1024 * 1024
+)
+```
+
+
+## Mapinhoud bekijken
+
+```{r list}
+# Inhoud van een map als data.frame
+dropbox_list_folder("/data")
+#>         naam                pad   type grootte           gewijzigd
+#> 1  data.csv     /data/data.csv   file   51200 2025-03-01 14:00:00
+#> 2   archief      /data/archief folder      NA                <NA>
+#> 3 rapport.xlsx /data/rapport.xlsx file  2048 2025-06-10 09:30:00
+
+# Alleen bestanden, recursief
+bestanden <- dropbox_list_folder("/data", recursive = TRUE, type = "file")
+
+# Alleen submappen
+submappen <- dropbox_list_folder("/data", type = "folder")
+
+# Totale grootte berekenen
+df <- dropbox_list_folder("/data", recursive = TRUE, type = "file")
+sprintf("Totaal: %.1f MB", sum(df$grootte, na.rm = TRUE) / 1024 / 1024)
+```
+
+
+## Bestandsinformatie en bestaan controleren
+
+```{r metadata}
+# Controleer of een pad bestaat
+dropbox_exists("/data/rapport.xlsx")
+#> [1] TRUE
+
+dropbox_exists("/niet/bestaand/pad")
+#> [1] FALSE
+
+# Metadata van een enkel bestand
+info <- dropbox_file_info("/data/rapport.xlsx")
+info$naam      # "rapport.xlsx"
+info$grootte   # 2048
+info$gewijzigd # 2025-06-10 09:30:00
+info$revisie   # "abc123def"
+
+# Handig als guard voor downloads
+if (dropbox_exists("/data/nieuw.parquet")) {
+  dropbox_download_file("/data/nieuw.parquet", "lokaal.parquet")
+}
+```
+
+
+## Zoeken
+
+```{r search}
+# Zoek op bestandsnaam
+dropbox_search("rapport")
+#>              naam                    pad   type grootte           gewijzigd
+#> 1 rapport_2025.xlsx /data/rapport_2025.xlsx file  8192 2025-04-01 10:00:00
+#> 2        rapporten           /rapporten folder    NA                  <NA>
+
+# Zoek in een specifieke map
+dropbox_search("2026", path = "/projecten")
+
+# Filter op extensie
+dropbox_search("export", extensions = c("csv", "xlsx"))
+
+# Meer resultaten
+resultaten <- dropbox_search("parquet", max_results = 500)
+```
+
+
+## Bestanden beheren
+
+### Verplaatsen en hernoemen
+
+```{r move}
+# Bestand verplaatsen naar andere map
+dropbox_move("/data/rapport.xlsx", "/archief/rapport.xlsx")
+
+# Bestand hernoemen (zelfde map, andere naam)
+dropbox_move("/data/draft.csv", "/data/final.csv")
+
+# Map verplaatsen (inclusief inhoud)
+dropbox_move("/projecten/oud", "/archief/oud")
+```
+
+### Verwijderen
+
+```{r delete}
+# Bestand verwijderen (gaat naar Dropbox prullenbak)
+dropbox_delete("/data/temp.csv")
+
+# Map verwijderen (inclusief alle inhoud)
+dropbox_delete("/temp/oude_exports")
+
+# Veilig verwijderen: controleer eerst of het bestaat
+if (dropbox_exists("/data/temp.csv")) {
+  dropbox_delete("/data/temp.csv")
+}
+```
+
+### Map aanmaken
+
+```{r create-folder}
+# Map aanmaken (tussenliggende mappen worden automatisch aangemaakt)
+dropbox_create_folder("/projecten/2026/Q3")
+
+# Alleen aanmaken als de map nog niet bestaat
+if (!dropbox_exists("/data/exports")) {
+  dropbox_create_folder("/data/exports")
+}
+```
+
+
+## Lokale map vergelijken met Dropbox
+
+Controleer of een lokale kopie nog synchroon loopt met Dropbox:
+
+```{r compare}
+# Vergelijk op naam en grootte
+resultaat <- dropbox_compare_folder(
+  local_folder   = "D:/data/parquet",
+  dropbox_folder = "/data/parquet"
+)
+#> [DROPBOX] 15 lokale bestanden gevonden
+#> [DROPBOX] 18 Dropbox-bestanden gevonden
+#>
+#> [DROPBOX] Vergelijking voltooid:
+#>   Gelijk:             12
+#>   Alleen lokaal:       3
+#>   Alleen Dropbox:      3
+#>   Grootte verschilt:   0
+#>   Datum verschilt:     0
+#>   Totaal:             18
+
+# Inclusief datumvergelijking en submappen
+resultaat <- dropbox_compare_folder(
+  local_folder   = "D:/projecten/2026",
+  dropbox_folder = "/projecten/2026",
+  recursive      = TRUE,
+  compare_date   = TRUE
+)
+
+# Alleen bestanden met problemen bekijken
+problemen <- resultaat[resultaat$status != "gelijk", ]
+
+# Welke bestanden ontbreken lokaal?
+ontbrekend <- resultaat[resultaat$status == "alleen_dropbox", ]
+```
+
+
+## Veelvoorkomende workflows
+
+### Download alleen nieuwe bestanden
+
+```{r workflow-sync}
+# Vergelijk eerst, download dan alleen wat ontbreekt
+vergelijking <- dropbox_compare_folder(
+  local_folder   = "D:/data",
+  dropbox_folder = "/data",
+  compare_date   = FALSE
+)
+
+ontbrekend <- vergelijking[vergelijking$status == "alleen_dropbox", ]
+
+if (nrow(ontbrekend) > 0) {
+  token <- dropbox_token()
+  for (naam in ontbrekend$naam) {
+    dropbox_download_file(
+      dropbox_path = paste0("/data/", naam),
+      local_path   = file.path("D:/data", naam),
+      token        = token
+    )
+  }
+  message(sprintf("%d nieuwe bestanden gedownload", nrow(ontbrekend)))
+}
+```
+
+### Upload resultaten na een analyse
+
+```{r workflow-upload}
+# Sla resultaat op en upload naar Dropbox
+saveRDS(model, "D:/output/model.rds")
+
+dropbox_create_folder("/resultaten/2026-05")  # als map nog niet bestaat
+dropbox_upload("D:/output/model.rds", "/resultaten/2026-05/model.rds")
+```
+
+### Zoek en download
+
+```{r workflow-search}
+# Zoek alle parquet bestanden en bekijk de totale grootte
+bestanden <- dropbox_search("parquet", extensions = "parquet", max_results = 500)
+sprintf("Gevonden: %d bestanden (%.1f MB)",
+  nrow(bestanden),
+  sum(bestanden$grootte, na.rm = TRUE) / 1024 / 1024
+)
+```
+
+
+## Troubleshooting
+
+### "DROPBOX_APP_KEY is niet ingesteld in .Renviron"
+
+De omgevingsvariabelen zijn niet gevonden. Controleer:
+
+1. Staat er een `.Renviron` bestand? Open via `usethis::edit_r_environ()`
+2. Staan de variabelen er correct in (zonder aanhalingstekens rond de waarden)?
+3. Heb je R herstart na het opslaan?
+
+### "invalid_grant" bij token ophalen
+
+De autorisatiecode is verlopen of al gebruikt. Genereer een nieuwe code
+via de browser-URL uit Stap 2.
+
+### "insufficient_permissions"
+
+Je Dropbox app mist de juiste scopes. Ga naar de **Permissions** tab van
+je app op <https://www.dropbox.com/developers/apps>, zet de benodigde
+scopes aan, en genereer daarna een **nieuw** refresh token (Stap 2 opnieuw
+doorlopen).
+
+### Refresh token kwijt?
+
+Een refresh token kan niet worden opgehaald uit Dropbox. Je moet Stap 2
+opnieuw doorlopen om een nieuw refresh token te genereren. Het oude token
+blijft geldig totdat je het expliciet intrekt via de app-instellingen.
