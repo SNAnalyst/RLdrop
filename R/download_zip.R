@@ -19,7 +19,8 @@
 #'   Moet beginnen met `/`.
 #' @param local_folder Lokaal pad waar de inhoud van de zip wordt uitgepakt.
 #'   Wordt aangemaakt als deze nog niet bestaat.
-#' @param token Dropbox API access token als character string.
+#' @param token Dropbox API access token als character string. Standaard
+#'   wordt automatisch een token opgehaald via [dropbox_token()].
 #' @param keep_zip Logisch. Indien `TRUE`, wordt de zip na uitpakken bewaard.
 #'   Standaard `FALSE` (zip wordt verwijderd na uitpakken).
 #'
@@ -34,7 +35,8 @@
 #' verwijderd (tenzij `keep_zip = TRUE`).
 #'
 #' @section Authenticatie:
-#' Vereist de scopes `files.content.read` en `files.metadata.read`.
+#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
+#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
 #' [dropbox_download_folder_zip()] voor grote mappen die automatisch per
@@ -44,15 +46,12 @@
 #'
 #' @examples
 #' \dontrun{
-#' token <- dropbox_token()
-#'
 #' dropbox_download_zip(
 #'   dropbox_folder = "/data/parquet/year=2024",
-#'   local_folder   = "D:/lokaal/parquet/year=2024",
-#'   token          = token
+#'   local_folder   = "D:/lokaal/parquet/year=2024"
 #' )
 #' }
-dropbox_download_zip <- function(dropbox_folder, local_folder, token, keep_zip = FALSE) {
+dropbox_download_zip <- function(dropbox_folder, local_folder, token = dropbox_token(), keep_zip = FALSE) {
 
   if (!dir.exists(local_folder)) dir.create(local_folder, recursive = TRUE)
 
@@ -103,7 +102,8 @@ dropbox_download_zip <- function(dropbox_folder, local_folder, token, keep_zip =
 #'   `"/Datasets/EODHD/hulp"`. Moet beginnen met `/`.
 #' @param local_folder Lokaal pad van de doelmap. Wordt aangemaakt als deze
 #'   nog niet bestaat.
-#' @param token Dropbox API access token als character string.
+#' @param token Dropbox API access token als character string. Standaard
+#'   wordt automatisch een token opgehaald via [dropbox_token()].
 #' @param keep_zip Logisch. Indien `TRUE`, worden de zip-bestanden na uitpakken
 #'   bewaard. Standaard `FALSE`.
 #'
@@ -122,7 +122,8 @@ dropbox_download_zip <- function(dropbox_folder, local_folder, token, keep_zip =
 #' [dropbox_download_zip()] op de rootmap zelf.
 #'
 #' @section Authenticatie:
-#' Vereist de scopes `files.content.read` en `files.metadata.read`.
+#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
+#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
 #' [dropbox_download_zip()] voor het downloaden van een enkele map als zip.\cr
@@ -132,16 +133,13 @@ dropbox_download_zip <- function(dropbox_folder, local_folder, token, keep_zip =
 #'
 #' @examples
 #' \dontrun{
-#' token <- dropbox_token()
-#'
 #' # Grote map per submap downloaden
 #' dropbox_download_folder_zip(
 #'   dropbox_folder = "/Datasets/EODHD/hulp",
-#'   local_folder   = "D:/lokaal/hulp",
-#'   token          = token
+#'   local_folder   = "D:/lokaal/hulp"
 #' )
 #' }
-dropbox_download_folder_zip <- function(dropbox_folder, local_folder, token, keep_zip = FALSE) {
+dropbox_download_folder_zip <- function(dropbox_folder, local_folder, token = dropbox_token(), keep_zip = FALSE) {
 
   if (!dir.exists(local_folder)) dir.create(local_folder, recursive = TRUE)
 

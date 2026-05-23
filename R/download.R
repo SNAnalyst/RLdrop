@@ -16,9 +16,8 @@
 #' @param local_path Volledig lokaal pad inclusief bestandsnaam waar het bestand
 #'   opgeslagen wordt, bijv. `"D:/lokaal/bestand.parquet"`. De bovenliggende
 #'   map moet al bestaan.
-#' @param token Dropbox API access token als character string. Genereer via
-#'   \url{https://www.dropbox.com/developers/apps} onder het tabblad
-#'   `Settings` van je app.
+#' @param token Dropbox API access token als character string. Standaard
+#'   wordt automatisch een token opgehaald via [dropbox_token()].
 #'
 #' @return Invisibly het lokale pad (`local_path`) als character string.
 #'   Wordt aangeroepen voor zijn neveneffect (bestand schrijven naar schijf).
@@ -32,9 +31,8 @@
 #' functie een fout met de volledige API-foutmelding als bericht.
 #'
 #' @section Authenticatie:
-#' Maak een Dropbox app aan op \url{https://www.dropbox.com/developers/apps}
-#' met `Full Dropbox` scope. Vink onder `Permissions` de scope
-#' `files.content.read` aan. Genereer daarna een token onder `Settings`.
+#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
+#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
 #' [dropbox_download_folder()] om een volledige map te downloaden.
@@ -43,20 +41,17 @@
 #'
 #' @examples
 #' \dontrun{
-#' token <- dropbox_token()
-#'
 #' # Enkelvoudig bestand downloaden
 #' dropbox_download_file(
 #'   dropbox_path = "/data/bestand.parquet",
-#'   local_path   = "D:/lokaal/bestand.parquet",
-#'   token        = token
+#'   local_path   = "D:/lokaal/bestand.parquet"
 #' )
 #'
 #' # Resultaat opvangen en direct inlezen
-#' pad    <- dropbox_download_file("/config/settings.rds", tempfile(), token)
+#' pad    <- dropbox_download_file("/config/settings.rds", tempfile())
 #' config <- readRDS(pad)
 #' }
-dropbox_download_file <- function(dropbox_path, local_path, token) {
+dropbox_download_file <- function(dropbox_path, local_path, token = dropbox_token()) {
 
   response <- httr::POST(
     "https://content.dropboxapi.com/2/files/download",
@@ -153,7 +148,8 @@ dropbox_download_file <- function(dropbox_path, local_path, token) {
 #'   Moet beginnen met `/`. Gebruik `""` voor de root van je Dropbox.
 #' @param local_folder Lokaal pad van de doelmap. Wordt aangemaakt als deze
 #'   nog niet bestaat, inclusief bovenliggende mappen.
-#' @param token Dropbox API access token als character string.
+#' @param token Dropbox API access token als character string. Standaard
+#'   wordt automatisch een token opgehaald via [dropbox_token()].
 #' @param recursive Logisch. Indien `TRUE`, worden submappen ook gedownload
 #'   en wordt de mapstructuur lokaal gerepliceerd. Standaard `FALSE`.
 #'
@@ -182,8 +178,8 @@ dropbox_download_file <- function(dropbox_path, local_path, token) {
 #' bestandsfouten worden doorgegeven vanuit [dropbox_download_file()].
 #'
 #' @section Authenticatie:
-#' Vereist de scopes `files.content.read` en `files.metadata.read` in je
-#' Dropbox app permissions.
+#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
+#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
 #' [dropbox_download_file()] voor het downloaden van een enkel bestand.
@@ -192,24 +188,20 @@ dropbox_download_file <- function(dropbox_path, local_path, token) {
 #'
 #' @examples
 #' \dontrun{
-#' token <- dropbox_token()
-#'
 #' # Platte map downloaden (geen submappen)
 #' dropbox_download_folder(
 #'   dropbox_folder = "/data/parquet",
-#'   local_folder   = "D:/lokaal/parquet",
-#'   token          = token
+#'   local_folder   = "D:/lokaal/parquet"
 #' )
 #'
 #' # Inclusief alle submappen
 #' dropbox_download_folder(
 #'   dropbox_folder = "/projecten/2026",
 #'   local_folder   = "D:/lokaal/projecten/2026",
-#'   token          = token,
 #'   recursive      = TRUE
 #' )
 #' }
-dropbox_download_folder <- function(dropbox_folder, local_folder, token, recursive = FALSE) {
+dropbox_download_folder <- function(dropbox_folder, local_folder, token = dropbox_token(), recursive = FALSE) {
 
   # --- Fase 1: inventariseer alle items ---
   entries <- .list_folder_recursive(dropbox_folder, token, recursive)

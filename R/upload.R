@@ -16,9 +16,8 @@
 #'   niet bestaat.
 #' @param dropbox_path Doelpad op Dropbox inclusief bestandsnaam,
 #'   bijv. `"/data/bestand.parquet"`. Moet beginnen met `/`.
-#' @param token Dropbox API access token als character string. Genereer via
-#'   \url{https://www.dropbox.com/developers/apps} onder het tabblad
-#'   `Settings` van je app.
+#' @param token Dropbox API access token als character string. Standaard
+#'   wordt automatisch een token opgehaald via [dropbox_token()].
 #' @param mode Schrijfmodus als character string. Opties:
 #'   \describe{
 #'     \item{`"overwrite"`}{Overschrijft een bestaand bestand (standaard).}
@@ -37,10 +36,9 @@
 #' basis van bestandsgrootte.
 #'
 #' @section Authenticatie:
-#' Vereist de scope `files.content.write` in je Dropbox app permissions.
-#' Maak een token aan via \url{https://www.dropbox.com/developers/apps}.
-#' Sla het token op als omgevingsvariabele:
-#' `Sys.setenv(DROPBOX_TOKEN = "jouw_token")`.
+#' Het token wordt standaard automatisch opgehaald via [dropbox_token()],
+#' die de credentials leest uit omgevingsvariabelen. Zie [dropbox_token()]
+#' voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
 #' [dropbox_upload()] voor automatische keuze tussen gewone en chunked upload. \cr
@@ -51,20 +49,18 @@
 #'
 #' @examples
 #' \dontrun{
-#' token <- Sys.getenv("DROPBOX_TOKEN")
-#'
 #' # Bestand uploaden met overschrijven (standaard)
+#' # Token wordt automatisch opgehaald via dropbox_token()
 #' dropbox_upload_file(
 #'   local_path   = "D:/data/bestand.parquet",
-#'   dropbox_path = "/data/bestand.parquet",
-#'   token        = token
+#'   dropbox_path = "/data/bestand.parquet"
 #' )
 #'
 #' # Metadata opvangen
-#' meta <- dropbox_upload_file("D:/output/result.rds", "/output/result.rds", token)
+#' meta <- dropbox_upload_file("D:/output/result.rds", "/output/result.rds")
 #' message("Opgeslagen als: ", meta$path_display)
 #' }
-dropbox_upload_file <- function(local_path, dropbox_path, token, mode = "overwrite") {
+dropbox_upload_file <- function(local_path, dropbox_path, token = dropbox_token(), mode = "overwrite") {
 
   if (!file.exists(local_path)) {
     stop(sprintf("[DROPBOX] Lokaal bestand niet gevonden: %s", local_path))
@@ -114,7 +110,8 @@ dropbox_upload_file <- function(local_path, dropbox_path, token, mode = "overwri
 #'   Gooit een fout als het bestand niet bestaat.
 #' @param dropbox_path Doelpad op Dropbox inclusief bestandsnaam,
 #'   bijv. `"/data/groot_bestand.csv"`. Moet beginnen met `/`.
-#' @param token Dropbox API access token als character string.
+#' @param token Dropbox API access token als character string. Standaard
+#'   wordt automatisch een token opgehaald via [dropbox_token()].
 #' @param chunk_size Grootte van elk upload-chunk in bytes. Standaard 128MB
 #'   (`128 * 1024 * 1024`). Grotere chunks zijn sneller maar kwetsbaarder
 #'   voor netwerkfouten; kleinere chunks zijn robuuster maar langzamer.
@@ -149,8 +146,8 @@ dropbox_upload_file <- function(local_path, dropbox_path, token, mode = "overwri
 #' mislukte upload wordt niet automatisch hervat; start opnieuw bij fout.
 #'
 #' @section Authenticatie:
-#' Vereist de scope `files.content.write` in je Dropbox app permissions.
-#' Zie [dropbox_upload_file()] voor instructies over het aanmaken van een token.
+#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
+#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
 #' [dropbox_upload()] als automatische wrapper die kiest op bestandsgrootte. \cr
@@ -161,24 +158,20 @@ dropbox_upload_file <- function(local_path, dropbox_path, token, mode = "overwri
 #'
 #' @examples
 #' \dontrun{
-#' token <- Sys.getenv("DROPBOX_TOKEN")
-#'
 #' # Groot bestand uploaden met standaard chunk-grootte (128MB)
 #' dropbox_upload_large_file(
 #'   local_path   = "D:/data/groot_bestand.csv",
-#'   dropbox_path = "/data/groot_bestand.csv",
-#'   token        = token
+#'   dropbox_path = "/data/groot_bestand.csv"
 #' )
 #'
 #' # Kleinere chunks voor instabiele verbinding (bijv. 32MB)
 #' dropbox_upload_large_file(
 #'   local_path   = "D:/data/groot_bestand.csv",
 #'   dropbox_path = "/data/groot_bestand.csv",
-#'   token        = token,
 #'   chunk_size   = 32 * 1024 * 1024
 #' )
 #' }
-dropbox_upload_large_file <- function(local_path, dropbox_path, token,
+dropbox_upload_large_file <- function(local_path, dropbox_path, token = dropbox_token(),
                                        chunk_size = 128 * 1024 * 1024,
                                        mode = "overwrite") {
 
@@ -303,7 +296,8 @@ dropbox_upload_large_file <- function(local_path, dropbox_path, token,
 #' @param local_path Volledig lokaal pad van het te uploaden bestand.
 #' @param dropbox_path Doelpad op Dropbox inclusief bestandsnaam.
 #'   Moet beginnen met `/`.
-#' @param token Dropbox API access token als character string.
+#' @param token Dropbox API access token als character string. Standaard
+#'   wordt automatisch een token opgehaald via [dropbox_token()].
 #' @param mode Schrijfmodus: `"overwrite"` (standaard), `"add"`, of `"update"`.
 #' @param large_file_threshold Drempel in bytes waarboven de chunked upload
 #'   session wordt gebruikt. Standaard 140MB (`140 * 1024 * 1024`).
@@ -319,8 +313,8 @@ dropbox_upload_large_file <- function(local_path, dropbox_path, token,
 #' }
 #'
 #' @section Authenticatie:
-#' Vereist de scope `files.content.write` in je Dropbox app permissions.
-#' Zie [dropbox_upload_file()] voor instructies over het aanmaken van een token.
+#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
+#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
 #' [dropbox_upload_file()] voor kleine bestanden. \cr
@@ -331,23 +325,20 @@ dropbox_upload_large_file <- function(local_path, dropbox_path, token,
 #'
 #' @examples
 #' \dontrun{
-#' token <- Sys.getenv("DROPBOX_TOKEN")
-#'
 #' # Automatische keuze (aanbevolen)
-#' dropbox_upload("D:/data/bestand.parquet", "/data/bestand.parquet", token)
+#' dropbox_upload("D:/data/bestand.parquet", "/data/bestand.parquet")
 #'
 #' # Groot bestand — zelfde aanroep, chunked wordt automatisch gebruikt
-#' dropbox_upload("D:/data/groot.csv", "/data/groot.csv", token)
+#' dropbox_upload("D:/data/groot.csv", "/data/groot.csv")
 #'
 #' # Lagere drempel instellen (chunked al vanaf 50MB)
 #' dropbox_upload(
 #'   local_path           = "D:/data/bestand.csv",
 #'   dropbox_path         = "/data/bestand.csv",
-#'   token                = token,
 #'   large_file_threshold = 50 * 1024 * 1024
 #' )
 #' }
-dropbox_upload <- function(local_path, dropbox_path, token,
+dropbox_upload <- function(local_path, dropbox_path, token = dropbox_token(),
                             mode = "overwrite",
                             large_file_threshold = 140 * 1024 * 1024) {
 
@@ -372,7 +363,8 @@ dropbox_upload <- function(local_path, dropbox_path, token,
 #'   bijv. `"D:/data/parquet"`. Gooit een fout als de map niet bestaat.
 #' @param dropbox_folder Doelmap op Dropbox, bijv. `"/data/parquet"`.
 #'   Moet beginnen met `/`. De map hoeft niet al te bestaan op Dropbox.
-#' @param token Dropbox API access token als character string.
+#' @param token Dropbox API access token als character string. Standaard
+#'   wordt automatisch een token opgehaald via [dropbox_token()].
 #' @param recursive Logisch. Indien `TRUE`, worden bestanden in submappen
 #'   ook geupload en wordt de mapstructuur gerepliceerd op Dropbox.
 #'   Standaard `FALSE`.
@@ -403,8 +395,8 @@ dropbox_upload <- function(local_path, dropbox_path, token,
 #' worden verzameld en als `warning()` gerapporteerd na afloop.
 #'
 #' @section Authenticatie:
-#' Vereist de scope `files.content.write` in je Dropbox app permissions.
-#' Zie [dropbox_upload_file()] voor instructies over het aanmaken van een token.
+#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
+#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
 #' [dropbox_upload()] voor het uploaden van een enkel bestand. \cr
@@ -415,28 +407,24 @@ dropbox_upload <- function(local_path, dropbox_path, token,
 #'
 #' @examples
 #' \dontrun{
-#' token <- Sys.getenv("DROPBOX_TOKEN")
-#'
 #' # Platte map uploaden
 #' dropbox_upload_folder(
 #'   local_folder   = "D:/data/parquet",
-#'   dropbox_folder = "/data/parquet",
-#'   token          = token
+#'   dropbox_folder = "/data/parquet"
 #' )
 #'
 #' # Inclusief submappen
 #' dropbox_upload_folder(
 #'   local_folder   = "D:/data",
 #'   dropbox_folder = "/data",
-#'   token          = token,
 #'   recursive      = TRUE
 #' )
 #'
 #' # Geuploadde paden opvangen
-#' geupload <- dropbox_upload_folder("D:/output", "/output", token, recursive = TRUE)
+#' geupload <- dropbox_upload_folder("D:/output", "/output", recursive = TRUE)
 #' message(sprintf("%d bestanden geupload", length(geupload)))
 #' }
-dropbox_upload_folder <- function(local_folder, dropbox_folder, token,
+dropbox_upload_folder <- function(local_folder, dropbox_folder, token = dropbox_token(),
                                    recursive = FALSE, mode = "overwrite",
                                    large_file_threshold = 140 * 1024 * 1024) {
 
