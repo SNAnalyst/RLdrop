@@ -4,7 +4,12 @@
 \alias{dropbox_download_zip}
 \title{Download een Dropbox-map als zip en pak deze lokaal uit}
 \usage{
-dropbox_download_zip(dropbox_folder, local_folder, token, keep_zip = FALSE)
+dropbox_download_zip(
+  dropbox_folder,
+  local_folder,
+  token = dropbox_token(),
+  keep_zip = FALSE
+)
 }
 \arguments{
 \item{dropbox_folder}{Pad naar de map op Dropbox, bijv. \code{"/data/parquet"}.
@@ -13,7 +18,8 @@ Moet beginnen met \code{/}.}
 \item{local_folder}{Lokaal pad waar de inhoud van de zip wordt uitgepakt.
 Wordt aangemaakt als deze nog niet bestaat.}
 
-\item{token}{Dropbox API access token als character string.}
+\item{token}{Dropbox API access token als character string. Standaard
+wordt automatisch een token opgehaald via \code{\link[=dropbox_token]{dropbox_token()}}.}
 
 \item{keep_zip}{Logisch. Indien \code{TRUE}, wordt de zip na uitpakken bewaard.
 Standaard \code{FALSE} (zip wordt verwijderd na uitpakken).}
@@ -40,17 +46,15 @@ verwijderd (tenzij \code{keep_zip = TRUE}).
 }
 \section{Authenticatie}{
 
-Vereist de scopes \code{files.content.read} en \code{files.metadata.read}.
+Het token wordt standaard automatisch opgehaald via \code{\link[=dropbox_token]{dropbox_token()}}.
+Zie \code{\link[=dropbox_token]{dropbox_token()}} voor het instellen van de benodigde omgevingsvariabelen.
 }
 
 \examples{
 \dontrun{
-token <- dropbox_token()
-
 dropbox_download_zip(
   dropbox_folder = "/data/parquet/year=2024",
-  local_folder   = "D:/lokaal/parquet/year=2024",
-  token          = token
+  local_folder   = "D:/lokaal/parquet/year=2024"
 )
 }
 }

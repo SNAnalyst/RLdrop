@@ -4,7 +4,7 @@
 \alias{dropbox_download_file}
 \title{Download een bestand van Dropbox direct via API}
 \usage{
-dropbox_download_file(dropbox_path, local_path, token)
+dropbox_download_file(dropbox_path, local_path, token = dropbox_token())
 }
 \arguments{
 \item{dropbox_path}{Pad op Dropbox, bijv. \code{"/data/bestand.parquet"}. Moet
@@ -15,9 +15,8 @@ hoofdlettergevoeligheid hangt af van de Dropbox-server.}
 opgeslagen wordt, bijv. \code{"D:/lokaal/bestand.parquet"}. De bovenliggende
 map moet al bestaan.}
 
-\item{token}{Dropbox API access token als character string. Genereer via
-\url{https://www.dropbox.com/developers/apps} onder het tabblad
-\code{Settings} van je app.}
+\item{token}{Dropbox API access token als character string. Standaard
+wordt automatisch een token opgehaald via \code{\link[=dropbox_token]{dropbox_token()}}.}
 }
 \value{
 Invisibly het lokale pad (\code{local_path}) als character string.
@@ -38,24 +37,20 @@ functie een fout met de volledige API-foutmelding als bericht.
 }
 \section{Authenticatie}{
 
-Maak een Dropbox app aan op \url{https://www.dropbox.com/developers/apps}
-met \verb{Full Dropbox} scope. Vink onder \code{Permissions} de scope
-\code{files.content.read} aan. Genereer daarna een token onder \code{Settings}.
+Het token wordt standaard automatisch opgehaald via \code{\link[=dropbox_token]{dropbox_token()}}.
+Zie \code{\link[=dropbox_token]{dropbox_token()}} voor het instellen van de benodigde omgevingsvariabelen.
 }
 
 \examples{
 \dontrun{
-token <- dropbox_token()
-
 # Enkelvoudig bestand downloaden
 dropbox_download_file(
   dropbox_path = "/data/bestand.parquet",
-  local_path   = "D:/lokaal/bestand.parquet",
-  token        = token
+  local_path   = "D:/lokaal/bestand.parquet"
 )
 
 # Resultaat opvangen en direct inlezen
-pad    <- dropbox_download_file("/config/settings.rds", tempfile(), token)
+pad    <- dropbox_download_file("/config/settings.rds", tempfile())
 config <- readRDS(pad)
 }
 }

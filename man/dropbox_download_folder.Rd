@@ -4,7 +4,12 @@
 \alias{dropbox_download_folder}
 \title{Download een volledige map van Dropbox direct via API}
 \usage{
-dropbox_download_folder(dropbox_folder, local_folder, token, recursive = FALSE)
+dropbox_download_folder(
+  dropbox_folder,
+  local_folder,
+  token = dropbox_token(),
+  recursive = FALSE
+)
 }
 \arguments{
 \item{dropbox_folder}{Pad naar de map op Dropbox, bijv. \code{"/data/parquet"}.
@@ -13,7 +18,8 @@ Moet beginnen met \code{/}. Gebruik \code{""} voor de root van je Dropbox.}
 \item{local_folder}{Lokaal pad van de doelmap. Wordt aangemaakt als deze
 nog niet bestaat, inclusief bovenliggende mappen.}
 
-\item{token}{Dropbox API access token als character string.}
+\item{token}{Dropbox API access token als character string. Standaard
+wordt automatisch een token opgehaald via \code{\link[=dropbox_token]{dropbox_token()}}.}
 
 \item{recursive}{Logisch. Indien \code{TRUE}, worden submappen ook gedownload
 en wordt de mapstructuur lokaal gerepliceerd. Standaard \code{FALSE}.}
@@ -52,26 +58,22 @@ bestandsfouten worden doorgegeven vanuit \code{\link[=dropbox_download_file]{dro
 
 \section{Authenticatie}{
 
-Vereist de scopes \code{files.content.read} en \code{files.metadata.read} in je
-Dropbox app permissions.
+Het token wordt standaard automatisch opgehaald via \code{\link[=dropbox_token]{dropbox_token()}}.
+Zie \code{\link[=dropbox_token]{dropbox_token()}} voor het instellen van de benodigde omgevingsvariabelen.
 }
 
 \examples{
 \dontrun{
-token <- dropbox_token()
-
 # Platte map downloaden (geen submappen)
 dropbox_download_folder(
   dropbox_folder = "/data/parquet",
-  local_folder   = "D:/lokaal/parquet",
-  token          = token
+  local_folder   = "D:/lokaal/parquet"
 )
 
 # Inclusief alle submappen
 dropbox_download_folder(
   dropbox_folder = "/projecten/2026",
   local_folder   = "D:/lokaal/projecten/2026",
-  token          = token,
   recursive      = TRUE
 )
 }

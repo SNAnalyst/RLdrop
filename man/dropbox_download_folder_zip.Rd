@@ -7,7 +7,7 @@
 dropbox_download_folder_zip(
   dropbox_folder,
   local_folder,
-  token,
+  token = dropbox_token(),
   keep_zip = FALSE
 )
 }
@@ -18,7 +18,8 @@ dropbox_download_folder_zip(
 \item{local_folder}{Lokaal pad van de doelmap. Wordt aangemaakt als deze
 nog niet bestaat.}
 
-\item{token}{Dropbox API access token als character string.}
+\item{token}{Dropbox API access token als character string. Standaard
+wordt automatisch een token opgehaald via \code{\link[=dropbox_token]{dropbox_token()}}.}
 
 \item{keep_zip}{Logisch. Indien \code{TRUE}, worden de zip-bestanden na uitpakken
 bewaard. Standaard \code{FALSE}.}
@@ -46,18 +47,16 @@ Bestanden direct in de rootmap (niet in een submap) worden gedownload via
 }
 \section{Authenticatie}{
 
-Vereist de scopes \code{files.content.read} en \code{files.metadata.read}.
+Het token wordt standaard automatisch opgehaald via \code{\link[=dropbox_token]{dropbox_token()}}.
+Zie \code{\link[=dropbox_token]{dropbox_token()}} voor het instellen van de benodigde omgevingsvariabelen.
 }
 
 \examples{
 \dontrun{
-token <- dropbox_token()
-
 # Grote map per submap downloaden
 dropbox_download_folder_zip(
   dropbox_folder = "/Datasets/EODHD/hulp",
-  local_folder   = "D:/lokaal/hulp",
-  token          = token
+  local_folder   = "D:/lokaal/hulp"
 )
 }
 }

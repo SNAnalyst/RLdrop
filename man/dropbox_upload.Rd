@@ -7,7 +7,7 @@
 dropbox_upload(
   local_path,
   dropbox_path,
-  token,
+  token = dropbox_token(),
   mode = "overwrite",
   large_file_threshold = 140 * 1024 * 1024
 )
@@ -18,7 +18,8 @@ dropbox_upload(
 \item{dropbox_path}{Doelpad op Dropbox inclusief bestandsnaam.
 Moet beginnen met \code{/}.}
 
-\item{token}{Dropbox API access token als character string.}
+\item{token}{Dropbox API access token als character string. Standaard
+wordt automatisch een token opgehaald via \code{\link[=dropbox_token]{dropbox_token()}}.}
 
 \item{mode}{Schrijfmodus: \code{"overwrite"} (standaard), \code{"add"}, of \code{"update"}.}
 
@@ -44,25 +45,22 @@ De keuze tussen uploadmethoden:
 }
 \section{Authenticatie}{
 
-Vereist de scope \code{files.content.write} in je Dropbox app permissions.
-Zie \code{\link[=dropbox_upload_file]{dropbox_upload_file()}} voor instructies over het aanmaken van een token.
+Het token wordt standaard automatisch opgehaald via \code{\link[=dropbox_token]{dropbox_token()}}.
+Zie \code{\link[=dropbox_token]{dropbox_token()}} voor het instellen van de benodigde omgevingsvariabelen.
 }
 
 \examples{
 \dontrun{
-token <- Sys.getenv("DROPBOX_TOKEN")
-
 # Automatische keuze (aanbevolen)
-dropbox_upload("D:/data/bestand.parquet", "/data/bestand.parquet", token)
+dropbox_upload("D:/data/bestand.parquet", "/data/bestand.parquet")
 
 # Groot bestand — zelfde aanroep, chunked wordt automatisch gebruikt
-dropbox_upload("D:/data/groot.csv", "/data/groot.csv", token)
+dropbox_upload("D:/data/groot.csv", "/data/groot.csv")
 
 # Lagere drempel instellen (chunked al vanaf 50MB)
 dropbox_upload(
   local_path           = "D:/data/bestand.csv",
   dropbox_path         = "/data/bestand.csv",
-  token                = token,
   large_file_threshold = 50 * 1024 * 1024
 )
 }

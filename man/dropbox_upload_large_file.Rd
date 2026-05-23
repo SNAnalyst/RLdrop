@@ -7,7 +7,7 @@
 dropbox_upload_large_file(
   local_path,
   dropbox_path,
-  token,
+  token = dropbox_token(),
   chunk_size = 128 * 1024 * 1024,
   mode = "overwrite"
 )
@@ -19,7 +19,8 @@ Gooit een fout als het bestand niet bestaat.}
 \item{dropbox_path}{Doelpad op Dropbox inclusief bestandsnaam,
 bijv. \code{"/data/groot_bestand.csv"}. Moet beginnen met \code{/}.}
 
-\item{token}{Dropbox API access token als character string.}
+\item{token}{Dropbox API access token als character string. Standaard
+wordt automatisch een token opgehaald via \code{\link[=dropbox_token]{dropbox_token()}}.}
 
 \item{chunk_size}{Grootte van elk upload-chunk in bytes. Standaard 128MB
 (\code{128 * 1024 * 1024}). Grotere chunks zijn sneller maar kwetsbaarder
@@ -65,26 +66,22 @@ mislukte upload wordt niet automatisch hervat; start opnieuw bij fout.
 
 \section{Authenticatie}{
 
-Vereist de scope \code{files.content.write} in je Dropbox app permissions.
-Zie \code{\link[=dropbox_upload_file]{dropbox_upload_file()}} voor instructies over het aanmaken van een token.
+Het token wordt standaard automatisch opgehaald via \code{\link[=dropbox_token]{dropbox_token()}}.
+Zie \code{\link[=dropbox_token]{dropbox_token()}} voor het instellen van de benodigde omgevingsvariabelen.
 }
 
 \examples{
 \dontrun{
-token <- Sys.getenv("DROPBOX_TOKEN")
-
 # Groot bestand uploaden met standaard chunk-grootte (128MB)
 dropbox_upload_large_file(
   local_path   = "D:/data/groot_bestand.csv",
-  dropbox_path = "/data/groot_bestand.csv",
-  token        = token
+  dropbox_path = "/data/groot_bestand.csv"
 )
 
 # Kleinere chunks voor instabiele verbinding (bijv. 32MB)
 dropbox_upload_large_file(
   local_path   = "D:/data/groot_bestand.csv",
   dropbox_path = "/data/groot_bestand.csv",
-  token        = token,
   chunk_size   = 32 * 1024 * 1024
 )
 }

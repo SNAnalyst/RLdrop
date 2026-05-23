@@ -7,7 +7,7 @@
 dropbox_upload_folder(
   local_folder,
   dropbox_folder,
-  token,
+  token = dropbox_token(),
   recursive = FALSE,
   mode = "overwrite",
   large_file_threshold = 140 * 1024 * 1024
@@ -20,7 +20,8 @@ bijv. \code{"D:/data/parquet"}. Gooit een fout als de map niet bestaat.}
 \item{dropbox_folder}{Doelmap op Dropbox, bijv. \code{"/data/parquet"}.
 Moet beginnen met \code{/}. De map hoeft niet al te bestaan op Dropbox.}
 
-\item{token}{Dropbox API access token als character string.}
+\item{token}{Dropbox API access token als character string. Standaard
+wordt automatisch een token opgehaald via \code{\link[=dropbox_token]{dropbox_token()}}.}
 
 \item{recursive}{Logisch. Indien \code{TRUE}, worden bestanden in submappen
 ook geupload en wordt de mapstructuur gerepliceerd op Dropbox.
@@ -63,31 +64,27 @@ worden verzameld en als \code{warning()} gerapporteerd na afloop.
 
 \section{Authenticatie}{
 
-Vereist de scope \code{files.content.write} in je Dropbox app permissions.
-Zie \code{\link[=dropbox_upload_file]{dropbox_upload_file()}} voor instructies over het aanmaken van een token.
+Het token wordt standaard automatisch opgehaald via \code{\link[=dropbox_token]{dropbox_token()}}.
+Zie \code{\link[=dropbox_token]{dropbox_token()}} voor het instellen van de benodigde omgevingsvariabelen.
 }
 
 \examples{
 \dontrun{
-token <- Sys.getenv("DROPBOX_TOKEN")
-
 # Platte map uploaden
 dropbox_upload_folder(
   local_folder   = "D:/data/parquet",
-  dropbox_folder = "/data/parquet",
-  token          = token
+  dropbox_folder = "/data/parquet"
 )
 
 # Inclusief submappen
 dropbox_upload_folder(
   local_folder   = "D:/data",
   dropbox_folder = "/data",
-  token          = token,
   recursive      = TRUE
 )
 
 # Geuploadde paden opvangen
-geupload <- dropbox_upload_folder("D:/output", "/output", token, recursive = TRUE)
+geupload <- dropbox_upload_folder("D:/output", "/output", recursive = TRUE)
 message(sprintf("\%d bestanden geupload", length(geupload)))
 }
 }

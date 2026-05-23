@@ -4,7 +4,12 @@
 \alias{dropbox_upload_file}
 \title{Upload een bestand naar Dropbox direct via API}
 \usage{
-dropbox_upload_file(local_path, dropbox_path, token, mode = "overwrite")
+dropbox_upload_file(
+  local_path,
+  dropbox_path,
+  token = dropbox_token(),
+  mode = "overwrite"
+)
 }
 \arguments{
 \item{local_path}{Volledig lokaal pad van het te uploaden bestand,
@@ -14,9 +19,8 @@ niet bestaat.}
 \item{dropbox_path}{Doelpad op Dropbox inclusief bestandsnaam,
 bijv. \code{"/data/bestand.parquet"}. Moet beginnen met \code{/}.}
 
-\item{token}{Dropbox API access token als character string. Genereer via
-\url{https://www.dropbox.com/developers/apps} onder het tabblad
-\code{Settings} van je app.}
+\item{token}{Dropbox API access token als character string. Standaard
+wordt automatisch een token opgehaald via \code{\link[=dropbox_token]{dropbox_token()}}.}
 
 \item{mode}{Schrijfmodus als character string. Opties:
 \describe{
@@ -43,25 +47,22 @@ basis van bestandsgrootte.
 }
 \section{Authenticatie}{
 
-Vereist de scope \code{files.content.write} in je Dropbox app permissions.
-Maak een token aan via \url{https://www.dropbox.com/developers/apps}.
-Sla het token op als omgevingsvariabele:
-\code{Sys.setenv(DROPBOX_TOKEN = "jouw_token")}.
+Het token wordt standaard automatisch opgehaald via \code{\link[=dropbox_token]{dropbox_token()}},
+die de credentials leest uit omgevingsvariabelen. Zie \code{\link[=dropbox_token]{dropbox_token()}}
+voor het instellen van de benodigde omgevingsvariabelen.
 }
 
 \examples{
 \dontrun{
-token <- Sys.getenv("DROPBOX_TOKEN")
-
 # Bestand uploaden met overschrijven (standaard)
+# Token wordt automatisch opgehaald via dropbox_token()
 dropbox_upload_file(
   local_path   = "D:/data/bestand.parquet",
-  dropbox_path = "/data/bestand.parquet",
-  token        = token
+  dropbox_path = "/data/bestand.parquet"
 )
 
 # Metadata opvangen
-meta <- dropbox_upload_file("D:/output/result.rds", "/output/result.rds", token)
+meta <- dropbox_upload_file("D:/output/result.rds", "/output/result.rds")
 message("Opgeslagen als: ", meta$path_display)
 }
 }
