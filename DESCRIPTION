@@ -1,12 +1,14 @@
 Package: RLdrop
 Title: Direct Dropbox API Access via httr
-Version: 0.2.0
-Authors@R: 
+Version: 0.3.0
+Authors@R:
     person("Roger", role = c("aut", "cre"), email = "your@email.com")
-Description: Provides functions to upload and download files and folders
-    directly via the Dropbox API v2, bypassing the Dropbox desktop client
-    sync queue. Useful for on-demand access to specific files without
-    waiting for the client to synchronise.
+Description: Provides functions to upload, download, list, search, compare,
+    move, delete and manage files and folders directly via the Dropbox API
+    v2, bypassing the Dropbox desktop client sync queue. Authentication is
+    handled via OAuth2 refresh tokens for unattended use. Useful for
+    on-demand access to specific files without waiting for the client to
+    synchronise.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -14,3 +16,5 @@ RoxygenNote: 7.3.3
 Imports:
     httr,
     jsonlite
+Suggests:
+    tinytest

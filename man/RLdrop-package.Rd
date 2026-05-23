@@ -6,14 +6,37 @@
 \alias{RLdrop-package}
 \title{RLdrop: Direct Dropbox API Access}
 \description{
-Provides functions to upload and download files and folders directly via
-the Dropbox API v2, bypassing the Dropbox desktop client sync queue.
+Biedt functies om bestanden en mappen rechtstreeks te beheren via de
+Dropbox API v2, onafhankelijk van de Dropbox desktop client en diens
+sync-wachtrij. Authenticatie verloopt via OAuth2 refresh tokens voor
+onbeheerd gebruik.
 }
-\section{Main functions}{
+\section{Authenticatie}{
+
+Alle functies accepteren een \code{token} parameter die standaard automatisch
+wordt opgehaald via \code{\link[=dropbox_token]{dropbox_token()}}. Stel de volgende omgevingsvariabelen
+in via \code{usethis::edit_r_environ()}:
+\itemize{
+\item \code{DROPBOX_APP_KEY}
+\item \code{DROPBOX_APP_SECRET}
+\item \code{DROPBOX_REFRESH_TOKEN}
+}
+Zie \code{\link[=dropbox_token]{dropbox_token()}} voor details.
+}
+
+\section{Downloaden}{
 
 \itemize{
 \item \code{\link[=dropbox_download_file]{dropbox_download_file()}} — download een enkel bestand
-\item \code{\link[=dropbox_download_folder]{dropbox_download_folder()}} — download een volledige map
+\item \code{\link[=dropbox_download_folder]{dropbox_download_folder()}} — download een volledige map (per bestand)
+\item \code{\link[=dropbox_download_zip]{dropbox_download_zip()}} — download een map als zip
+\item \code{\link[=dropbox_download_folder_zip]{dropbox_download_folder_zip()}} — download grote map per submap als zip
+}
+}
+
+\section{Uploaden}{
+
+\itemize{
 \item \code{\link[=dropbox_upload]{dropbox_upload()}} — upload een bestand (automatische keuze gewone/chunked)
 \item \code{\link[=dropbox_upload_file]{dropbox_upload_file()}} — upload een klein bestand (<150MB)
 \item \code{\link[=dropbox_upload_large_file]{dropbox_upload_large_file()}} — upload een groot bestand via chunked session
@@ -21,11 +44,24 @@ the Dropbox API v2, bypassing the Dropbox desktop client sync queue.
 }
 }
 
-\section{Authenticatie}{
+\section{Bestandsbeheer}{
 
-Genereer een access token via \url{https://www.dropbox.com/developers/apps}.
-Maak een app aan met \verb{Full Dropbox} scope en genereer een token onder
-het tabblad \code{Settings}.
+\itemize{
+\item \code{\link[=dropbox_list_folder]{dropbox_list_folder()}} — mapinhoud opvragen als data.frame
+\item \code{\link[=dropbox_exists]{dropbox_exists()}} — controleer of een pad bestaat
+\item \code{\link[=dropbox_file_info]{dropbox_file_info()}} — metadata van een enkel bestand of map
+\item \code{\link[=dropbox_search]{dropbox_search()}} — zoeken op bestandsnaam
+\item \code{\link[=dropbox_delete]{dropbox_delete()}} — bestand of map verwijderen
+\item \code{\link[=dropbox_move]{dropbox_move()}} — verplaatsen of hernoemen
+\item \code{\link[=dropbox_create_folder]{dropbox_create_folder()}} — map aanmaken
+}
+}
+
+\section{Vergelijken}{
+
+\itemize{
+\item \code{\link[=dropbox_compare_folder]{dropbox_compare_folder()}} — lokale map vergelijken met Dropbox-map
+}
 }
 
 \author{
