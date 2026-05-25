@@ -4,6 +4,29 @@
 # Much faster than per-file downloads for large folder trees.
 
 
+# Interne helper: pak zip uit met ondersteuning voor lange paden op Windows.
+# PowerShell Expand-Archive gebruikt .NET dat lange paden correct afhandelt.
+.unzip_safe <- function(zip_path, exdir) {
+  if (.Platform$OS.type == "windows") {
+    zip_norm <- normalizePath(zip_path, winslash = "\\", mustWork = TRUE)
+    dir_norm <- normalizePath(exdir, winslash = "\\", mustWork = TRUE)
+    ps_cmd <- sprintf(
+      "Expand-Archive -LiteralPath '%s' -DestinationPath '%s' -Force",
+      zip_norm, dir_norm
+    )
+    output <- system2("powershell",
+                       c("-NoProfile", "-NonInteractive", "-Command", ps_cmd),
+                       stdout = TRUE, stderr = TRUE)
+    exit_code <- attr(output, "status")
+    if (!is.null(exit_code) && exit_code != 0) {
+      stop(sprintf("[DROPBOX] Uitpakken mislukt: %s", paste(output, collapse = "\n")))
+    }
+  } else {
+    utils::unzip(zip_path, exdir = exdir)
+  }
+}
+
+
 #' Download een Dropbox-map als zip en pak deze lokaal uit
 #'
 #' @description
@@ -53,9 +76,11 @@
 #' }
 dropbox_download_zip <- function(dropbox_folder, local_folder, token = dropbox_token(), keep_zip = FALSE) {
 
-  if (!dir.exists(local_folder)) dir.create(local_folder, recursive = TRUE)
+  local_folder_long <- .win_long_path(local_folder)
+  if (!dir.exists(local_folder_long)) dir.create(local_folder_long, recursive = TRUE)
 
   zip_path <- file.path(local_folder, "_dropbox_download.zip")
+  zip_long <- .win_long_path(zip_path)
 
   message(sprintf("[DROPBOX] Zip downloaden: %s ...", dropbox_folder))
 
@@ -68,11 +93,11 @@ dropbox_download_zip <- function(dropbox_folder, local_folder, token = dropbox_t
         auto_unbox = TRUE
       )
     ),
-    httr::write_disk(zip_path, overwrite = TRUE)
+    httr::write_disk(zip_long, overwrite = TRUE)
   )
 
   if (httr::http_error(response)) {
-    if (file.exists(zip_path)) file.remove(zip_path)
+    if (file.exists(zip_long)) file.remove(zip_long)
     stop(sprintf(
       "[DROPBOX] Zip download mislukt voor '%s': %s",
       dropbox_folder,
@@ -81,9 +106,9 @@ dropbox_download_zip <- function(dropbox_folder, local_folder, token = dropbox_t
   }
 
   message(sprintf("[DROPBOX] Uitpakken naar %s ...", local_folder))
-  utils::unzip(zip_path, exdir = local_folder)
+  .unzip_safe(zip_path, local_folder)
 
-  if (!keep_zip) file.remove(zip_path)
+  if (!keep_zip) file.remove(zip_long)
 
   message(sprintf("[DROPBOX] Klaar: %s", local_folder))
   invisible(local_folder)
@@ -141,7 +166,8 @@ dropbox_download_zip <- function(dropbox_folder, local_folder, token = dropbox_t
 #' }
 dropbox_download_folder_zip <- function(dropbox_folder, local_folder, token = dropbox_token(), keep_zip = FALSE) {
 
-  if (!dir.exists(local_folder)) dir.create(local_folder, recursive = TRUE)
+  local_folder_long <- .win_long_path(local_folder)
+  if (!dir.exists(local_folder_long)) dir.create(local_folder_long, recursive = TRUE)
 
   # [ARCH] Haal alleen directe submappen op (niet recursief) om per submap te splitsen
   message(sprintf("[DROPBOX] Submappen ophalen van %s ...", dropbox_folder))
