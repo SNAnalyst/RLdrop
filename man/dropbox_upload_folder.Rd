@@ -10,7 +10,8 @@ dropbox_upload_folder(
   token = dropbox_token(),
   recursive = FALSE,
   mode = "overwrite",
-  large_file_threshold = 140 * 1024 * 1024
+  large_file_threshold = 140 * 1024 * 1024,
+  overwrite = "newer"
 )
 }
 \arguments{
@@ -32,6 +33,19 @@ Standaard \code{FALSE}.}
 \item{large_file_threshold}{Drempel in bytes waarboven chunked upload
 wordt gebruikt per bestand. Standaard 140MB. Doorgegeven aan
 \code{\link[=dropbox_upload]{dropbox_upload()}}.}
+
+\item{overwrite}{Bepaalt welke bestanden geupload worden als ze al op
+Dropbox staan:
+\describe{
+\item{\code{"always"}}{Upload alles, ongeacht wat er op Dropbox staat.}
+\item{\code{"missing"}}{Sla bestanden over die al op Dropbox staan
+(op basis van naam).}
+\item{\code{"changed"}}{Upload alleen ontbrekende bestanden en bestanden
+waarvan de grootte (bytes) verschilt.}
+\item{\code{"newer"}}{Upload alleen ontbrekende bestanden en bestanden
+waarvan de lokale versie nieuwer is dan de Dropbox-versie
+(lokale \code{mtime} > \code{client_modified}) (standaard).}
+}}
 }
 \value{
 Invisibly een character vector van Dropbox-paden die succesvol
@@ -41,25 +55,27 @@ zijn geupload.
 Uploadt alle bestanden in een lokale map naar een Dropbox-map. Optioneel
 recursief voor submappen. Gebruikt \code{\link[=dropbox_upload]{dropbox_upload()}} per bestand, zodat
 grote bestanden automatisch via chunked upload worden verstuurd.
+
+Individuele bestanden die niet geupload kunnen worden worden overgeslagen
+en aan het eind als waarschuwing gemeld, zodat de rest van de upload
+gewoon doorgaat.
 }
 \details{
-Gebruikt \code{\link[=list.files]{list.files()}} om lokale bestanden op te halen. Bij
-\code{recursive = TRUE} wordt het relatieve pad ten opzichte van \code{local_folder}
-berekend en gerepliceerd onder \code{dropbox_folder}, zodat de mapstructuur
-behouden blijft.
+Bij \code{overwrite} anders dan \code{"always"} wordt eerst de inhoud van de
+Dropbox-doelmap opgehaald om te bepalen welke bestanden overgeslagen
+kunnen worden. Dit kost een extra API-aanroep maar bespaart bandbreedte
+bij herhaalde uploads.
 
-Windows-backslashes in paden worden automatisch omgezet naar forward
-slashes voor compatibiliteit met de Dropbox API.
-
-Bestanden die individueel mislukken worden overgeslagen met een
-\code{warning()}; de upload gaat verder met de overige bestanden. Aan het
-einde wordt een overzicht getoond van geslaagde en mislukte uploads.
+Bij \code{recursive = TRUE} wordt het relatieve pad ten opzichte van
+\code{local_folder} berekend en gerepliceerd onder \code{dropbox_folder}, zodat
+de mapstructuur behouden blijft. Op Windows worden lange paden (>260
+tekens) automatisch afgehandeld.
 }
 \section{Foutafhandeling}{
 
 Als \code{local_folder} niet bestaat, gooit de functie direct een fout.
 Per bestand worden fouten opgevangen via \code{\link[=tryCatch]{tryCatch()}}; mislukte bestanden
-worden verzameld en als \code{warning()} gerapporteerd na afloop.
+worden verzameld en als \code{\link[=warning]{warning()}} gerapporteerd na afloop.
 }
 
 \section{Authenticatie}{
@@ -83,13 +99,26 @@ dropbox_upload_folder(
   recursive      = TRUE
 )
 
-# Geuploadde paden opvangen
-geupload <- dropbox_upload_folder("D:/output", "/output", recursive = TRUE)
-message(sprintf("\%d bestanden geupload", length(geupload)))
+# Alleen nieuwe of gewijzigde bestanden uploaden
+dropbox_upload_folder(
+  local_folder   = "D:/data",
+  dropbox_folder = "/data",
+  recursive      = TRUE,
+  overwrite      = "changed"
+)
+
+# Alleen ontbrekende bestanden uploaden
+dropbox_upload_folder(
+  local_folder   = "D:/data",
+  dropbox_folder = "/data",
+  recursive      = TRUE,
+  overwrite      = "missing"
+)
 }
 }
 \seealso{
 \code{\link[=dropbox_upload]{dropbox_upload()}} voor het uploaden van een enkel bestand. \cr
 \code{\link[=dropbox_upload_large_file]{dropbox_upload_large_file()}} voor grote bestanden. \cr
-\code{\link[=dropbox_download_folder]{dropbox_download_folder()}} voor het downloaden van een map.
+\code{\link[=dropbox_download_folder]{dropbox_download_folder()}} voor het downloaden van een map. \cr
+\code{\link[=dropbox_compare_folder]{dropbox_compare_folder()}} om een lokale map te vergelijken met Dropbox.
 }

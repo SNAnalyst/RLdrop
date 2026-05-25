@@ -62,7 +62,9 @@
 #' }
 dropbox_upload_file <- function(local_path, dropbox_path, token = dropbox_token(), mode = "overwrite") {
 
-  if (!file.exists(local_path)) {
+  local_long <- .win_long_path(local_path)
+
+  if (!file.exists(local_long)) {
     stop(sprintf("[DROPBOX] Lokaal bestand niet gevonden: %s", local_path))
   }
 
@@ -76,12 +78,12 @@ dropbox_upload_file <- function(local_path, dropbox_path, token = dropbox_token(
           path       = dropbox_path,
           mode       = mode,
           autorename = FALSE,
-          mute       = FALSE  # [ARCH] FALSE zodat Dropbox notificaties normaal werken
+          mute       = FALSE
         ),
         auto_unbox = TRUE
       )
     ),
-    body = httr::upload_file(local_path)
+    body = httr::upload_file(local_long)
   )
 
   if (httr::http_error(response)) {
@@ -175,15 +177,17 @@ dropbox_upload_large_file <- function(local_path, dropbox_path, token = dropbox_
                                        chunk_size = 128 * 1024 * 1024,
                                        mode = "overwrite") {
 
-  if (!file.exists(local_path)) {
+  local_long <- .win_long_path(local_path)
+
+  if (!file.exists(local_long)) {
     stop(sprintf("[DROPBOX] Lokaal bestand niet gevonden: %s", local_path))
   }
 
-  file_size <- file.info(local_path)$size
+  file_size <- file.info(local_long)$size
   message(sprintf("[DROPBOX] Start chunked upload: %s (%.1f MB)",
     basename(local_path), file_size / 1024 / 1024))
 
-  con <- file(local_path, "rb")
+  con <- file(local_long, "rb")
   on.exit(close(con))  # [ARCH] Altijd sluiten, ook bij fout
 
   # --- Stap 1: Start upload session ---
@@ -342,7 +346,7 @@ dropbox_upload <- function(local_path, dropbox_path, token = dropbox_token(),
                             mode = "overwrite",
                             large_file_threshold = 140 * 1024 * 1024) {
 
-  file_size <- file.info(local_path)$size
+  file_size <- file.info(.win_long_path(local_path))$size
 
   if (file_size >= large_file_threshold) {
     dropbox_upload_large_file(local_path, dropbox_path, token, mode = mode)
@@ -359,6 +363,10 @@ dropbox_upload <- function(local_path, dropbox_path, token = dropbox_token(),
 #' recursief voor submappen. Gebruikt [dropbox_upload()] per bestand, zodat
 #' grote bestanden automatisch via chunked upload worden verstuurd.
 #'
+#' Individuele bestanden die niet geupload kunnen worden worden overgeslagen
+#' en aan het eind als waarschuwing gemeld, zodat de rest van de upload
+#' gewoon doorgaat.
+#'
 #' @param local_folder Lokale map waarvan de inhoud wordt geupload,
 #'   bijv. `"D:/data/parquet"`. Gooit een fout als de map niet bestaat.
 #' @param dropbox_folder Doelmap op Dropbox, bijv. `"/data/parquet"`.
@@ -372,27 +380,37 @@ dropbox_upload <- function(local_path, dropbox_path, token = dropbox_token(),
 #' @param large_file_threshold Drempel in bytes waarboven chunked upload
 #'   wordt gebruikt per bestand. Standaard 140MB. Doorgegeven aan
 #'   [dropbox_upload()].
+#' @param overwrite Bepaalt welke bestanden geupload worden als ze al op
+#'   Dropbox staan:
+#'   \describe{
+#'     \item{`"always"`}{Upload alles, ongeacht wat er op Dropbox staat.}
+#'     \item{`"missing"`}{Sla bestanden over die al op Dropbox staan
+#'       (op basis van naam).}
+#'     \item{`"changed"`}{Upload alleen ontbrekende bestanden en bestanden
+#'       waarvan de grootte (bytes) verschilt.}
+#'     \item{`"newer"`}{Upload alleen ontbrekende bestanden en bestanden
+#'       waarvan de lokale versie nieuwer is dan de Dropbox-versie
+#'       (lokale `mtime` > `client_modified`) (standaard).}
+#'   }
 #'
 #' @return Invisibly een character vector van Dropbox-paden die succesvol
 #'   zijn geupload.
 #'
 #' @details
-#' Gebruikt [list.files()] om lokale bestanden op te halen. Bij
-#' `recursive = TRUE` wordt het relatieve pad ten opzichte van `local_folder`
-#' berekend en gerepliceerd onder `dropbox_folder`, zodat de mapstructuur
-#' behouden blijft.
+#' Bij `overwrite` anders dan `"always"` wordt eerst de inhoud van de
+#' Dropbox-doelmap opgehaald om te bepalen welke bestanden overgeslagen
+#' kunnen worden. Dit kost een extra API-aanroep maar bespaart bandbreedte
+#' bij herhaalde uploads.
 #'
-#' Windows-backslashes in paden worden automatisch omgezet naar forward
-#' slashes voor compatibiliteit met de Dropbox API.
-#'
-#' Bestanden die individueel mislukken worden overgeslagen met een
-#' `warning()`; de upload gaat verder met de overige bestanden. Aan het
-#' einde wordt een overzicht getoond van geslaagde en mislukte uploads.
+#' Bij `recursive = TRUE` wordt het relatieve pad ten opzichte van
+#' `local_folder` berekend en gerepliceerd onder `dropbox_folder`, zodat
+#' de mapstructuur behouden blijft. Op Windows worden lange paden (>260
+#' tekens) automatisch afgehandeld.
 #'
 #' @section Foutafhandeling:
 #' Als `local_folder` niet bestaat, gooit de functie direct een fout.
 #' Per bestand worden fouten opgevangen via [tryCatch()]; mislukte bestanden
-#' worden verzameld en als `warning()` gerapporteerd na afloop.
+#' worden verzameld en als [warning()] gerapporteerd na afloop.
 #'
 #' @section Authenticatie:
 #' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
@@ -401,7 +419,8 @@ dropbox_upload <- function(local_path, dropbox_path, token = dropbox_token(),
 #' @seealso
 #' [dropbox_upload()] voor het uploaden van een enkel bestand. \cr
 #' [dropbox_upload_large_file()] voor grote bestanden. \cr
-#' [dropbox_download_folder()] voor het downloaden van een map.
+#' [dropbox_download_folder()] voor het downloaden van een map. \cr
+#' [dropbox_compare_folder()] om een lokale map te vergelijken met Dropbox.
 #'
 #' @export
 #'
@@ -420,52 +439,131 @@ dropbox_upload <- function(local_path, dropbox_path, token = dropbox_token(),
 #'   recursive      = TRUE
 #' )
 #'
-#' # Geuploadde paden opvangen
-#' geupload <- dropbox_upload_folder("D:/output", "/output", recursive = TRUE)
-#' message(sprintf("%d bestanden geupload", length(geupload)))
+#' # Alleen nieuwe of gewijzigde bestanden uploaden
+#' dropbox_upload_folder(
+#'   local_folder   = "D:/data",
+#'   dropbox_folder = "/data",
+#'   recursive      = TRUE,
+#'   overwrite      = "changed"
+#' )
+#'
+#' # Alleen ontbrekende bestanden uploaden
+#' dropbox_upload_folder(
+#'   local_folder   = "D:/data",
+#'   dropbox_folder = "/data",
+#'   recursive      = TRUE,
+#'   overwrite      = "missing"
+#' )
 #' }
 dropbox_upload_folder <- function(local_folder, dropbox_folder, token = dropbox_token(),
                                    recursive = FALSE, mode = "overwrite",
-                                   large_file_threshold = 140 * 1024 * 1024) {
+                                   large_file_threshold = 140 * 1024 * 1024,
+                                   overwrite = "newer") {
+
+  overwrite <- match.arg(overwrite, choices = c("always", "missing", "changed", "newer"))
 
   if (!dir.exists(local_folder)) {
     stop(sprintf("[DROPBOX] Lokale map niet gevonden: %s", local_folder))
   }
 
   files <- list.files(local_folder, full.names = TRUE, recursive = recursive)
-  files <- files[!file.info(files)$isdir]
+  files <- files[!file.info(.win_long_path(files))$isdir]
 
-  if (length(files) == 0) {
+  n_files <- length(files)
+
+  if (n_files == 0) {
     message(sprintf("[DROPBOX] Geen bestanden gevonden in %s", local_folder))
     return(invisible(character(0)))
   }
 
+  message(sprintf("[DROPBOX] %d bestand(en) gevonden, uploaden gestart...", n_files))
+
+  # --- Dropbox-inhoud ophalen voor overwrite-check ---
+  dropbox_lookup <- list()
+  if (overwrite != "always") {
+    db_entries <- tryCatch(
+      .list_folder_recursive(dropbox_folder, token, recursive),
+      error = function(e) list()
+    )
+    file_entries <- Filter(function(e) e[[".tag"]] == "file", db_entries)
+
+    root_prefix_lower <- tolower(sub("/$", "", dropbox_folder))
+    for (entry in file_entries) {
+      rel_path <- substring(entry$path_lower, nchar(root_prefix_lower) + 1)
+      dropbox_lookup[[rel_path]] <- list(
+        size     = entry$size,
+        modified = entry$client_modified
+      )
+    }
+  }
+
+  # --- Upload met voortgangsbalk ---
+  pb       <- utils::txtProgressBar(min = 0, max = n_files, style = 3)
   uploaded <- character(0)
+  skipped  <- 0L
   failed   <- character(0)
 
-  for (local_path in files) {
-    # [ARCH] Relatief pad berekenen zodat mapstructuur behouden blijft op Dropbox
+  for (i in seq_along(files)) {
+    local_path    <- files[i]
     relative_path <- substring(local_path, nchar(local_folder) + 1)
-    relative_path <- gsub("\\\\", "/", relative_path)  # Windows backslashes naar forward slashes
+    relative_path <- gsub("\\\\", "/", relative_path)
     dropbox_path  <- paste0(dropbox_folder, relative_path)
 
+    # --- Overwrite-logica: controleer of we dit bestand moeten overslaan ---
+    if (overwrite != "always") {
+      rel_key <- tolower(relative_path)
+      db_info <- dropbox_lookup[[rel_key]]
+
+      if (!is.null(db_info)) {
+        skip      <- FALSE
+        local_long <- .win_long_path(local_path)
+
+        if (overwrite == "missing") {
+          skip <- TRUE
+        } else if (overwrite == "changed") {
+          local_size <- file.info(local_long)$size
+          skip <- !is.na(local_size) && local_size == db_info$size
+        } else if (overwrite == "newer") {
+          local_mtime <- file.info(local_long)$mtime
+          db_mtime    <- as.POSIXct(db_info$modified,
+                                     format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
+          skip <- !is.na(local_mtime) && !is.na(db_mtime) && local_mtime <= db_mtime
+        }
+
+        if (skip) {
+          skipped <- skipped + 1L
+          utils::setTxtProgressBar(pb, i)
+          next
+        }
+      }
+    }
+
+    # --- Upload met error handling ---
     tryCatch({
       dropbox_upload(local_path, dropbox_path, token,
                      mode                 = mode,
                      large_file_threshold = large_file_threshold)
       uploaded <- c(uploaded, dropbox_path)
     }, error = function(e) {
-      warning(sprintf("[DROPBOX] Overgeslagen vanwege fout: %s\n  %s", local_path, e$message))
-      failed <<- c(failed, local_path)
+      failed <<- c(failed, sprintf("  %s\n    %s", local_path, conditionMessage(e)))
     })
+
+    utils::setTxtProgressBar(pb, i)
   }
 
-  message(sprintf("[DROPBOX] %d/%d bestanden geupload naar %s",
-    length(uploaded), length(files), dropbox_folder))
+  close(pb)
+
+  # --- Samenvatting ---
+  message(sprintf(
+    "\n[DROPBOX] Klaar: %d geupload, %d overgeslagen, %d mislukt (van %d totaal)",
+    length(uploaded), skipped, length(failed), n_files
+  ))
 
   if (length(failed) > 0) {
-    warning(sprintf("[DROPBOX] %d bestanden mislukt:\n%s",
-      length(failed), paste(failed, collapse = "\n")))
+    warning(sprintf(
+      "[DROPBOX] %d bestand(en) niet geupload:\n%s",
+      length(failed), paste(failed, collapse = "\n")
+    ), call. = FALSE)
   }
 
   invisible(uploaded)
