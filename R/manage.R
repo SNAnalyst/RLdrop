@@ -1,6 +1,6 @@
 # manage.R
 # Functies voor het beheren van bestanden en mappen op Dropbox:
-# verwijderen, verplaatsen/hernoemen, en mappen aanmaken.
+# verwijderen, verplaatsen/hernoemen, kopiëren, en mappen aanmaken.
 # Gebruikt de /2/files/ endpoints van de Dropbox API v2.
 
 
@@ -225,5 +225,84 @@ dropbox_create_folder <- function(dropbox_path, token = dropbox_token()) {
 
   metadata <- httr::content(response)$metadata
   message(sprintf("[DROPBOX] Map aangemaakt: %s", dropbox_path))
+  invisible(metadata)
+}
+
+
+#' Kopieer een bestand of map op Dropbox
+#'
+#' @description
+#' Kopieert een bestand of map naar een nieuw pad op Dropbox. Het origineel
+#' blijft ongewijzigd op de oorspronkelijke locatie.
+#'
+#' @param from_path Bronpad op Dropbox, bijv. `"/data/rapport.csv"`.
+#'   Moet beginnen met `/`.
+#' @param to_path Doelpad op Dropbox, bijv. `"/archief/rapport.csv"`.
+#'   Moet beginnen met `/`.
+#' @param token Dropbox API access token als character string. Standaard
+#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#' @param allow_ownership_transfer Logisch. Indien `TRUE`, staat Dropbox toe
+#'   dat eigendom van het item wordt overgedragen bij kopiëren naar een
+#'   gedeelde map van een andere gebruiker. Standaard `FALSE`.
+#'
+#' @return Invisibly de metadata van het gekopieerde item als lijst.
+#'
+#' @details
+#' Gebruikt het `/2/files/copy_v2` endpoint. Bij het kopiëren van een
+#' map worden alle bestanden en submappen mee gekopieerd. Eventuele
+#' bovenliggende mappen op het doelpad worden niet automatisch aangemaakt —
+#' gebruik [dropbox_create_folder()] als het doelpad nog niet bestaat.
+#'
+#' Gooit een fout als het bronpad niet bestaat, het doelpad al bezet is,
+#' of bij onvoldoende rechten.
+#'
+#' @section Authenticatie:
+#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
+#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#'
+#' @seealso
+#' [dropbox_move()] om een item te verplaatsen in plaats van te kopiëren. \cr
+#' [dropbox_delete()] om een item te verwijderen.
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Bestand kopiëren
+#' dropbox_copy("/data/rapport.xlsx", "/archief/rapport.xlsx")
+#'
+#' # Map kopiëren (inclusief inhoud)
+#' dropbox_copy("/projecten/template", "/projecten/nieuw_project")
+#' }
+dropbox_copy <- function(from_path, to_path, token = dropbox_token(),
+                         allow_ownership_transfer = FALSE) {
+
+  response <- httr::POST(
+    "https://api.dropboxapi.com/2/files/copy_v2",
+    httr::add_headers(
+      Authorization  = paste("Bearer", token),
+      `Content-Type` = "application/json"
+    ),
+    body = jsonlite::toJSON(
+      list(
+        from_path                = from_path,
+        to_path                  = to_path,
+        allow_ownership_transfer = allow_ownership_transfer,
+        autorename               = FALSE
+      ),
+      auto_unbox = TRUE
+    )
+  )
+
+  if (httr::http_error(response)) {
+    stop(sprintf(
+      "[DROPBOX] Kopie mislukt van '%s' naar '%s': %s",
+      from_path, to_path,
+      httr::content(response, as = "text", encoding = "UTF-8")
+    ))
+  }
+
+  metadata <- httr::content(response)$metadata
+  message(sprintf("[DROPBOX] Gekopieerd: %s -> %s", from_path, to_path))
   invisible(metadata)
 }
