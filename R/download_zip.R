@@ -4,26 +4,139 @@
 # Much faster than per-file downloads for large folder trees.
 
 
-# Interne helper: pak zip uit met ondersteuning voor lange paden op Windows.
-# PowerShell Expand-Archive gebruikt .NET dat lange paden correct afhandelt.
-.unzip_safe <- function(zip_path, exdir) {
+# Interne helper: pak zip uit met ondersteuning voor lange paden en
+# selectieve extractie op basis van overwrite-modus.
+# Op Windows wordt .NET ZipArchive gebruikt voor lange paden en per-entry filtering.
+.unzip_safe <- function(zip_path, exdir, overwrite = "always") {
+  overwrite <- match.arg(overwrite, choices = c("always", "missing", "changed", "newer"))
+
   if (.Platform$OS.type == "windows") {
     zip_norm <- normalizePath(zip_path, winslash = "\\", mustWork = TRUE)
     dir_norm <- normalizePath(exdir, winslash = "\\", mustWork = TRUE)
-    ps_cmd <- sprintf(
-      "Expand-Archive -LiteralPath '%s' -DestinationPath '%s' -Force",
-      zip_norm, dir_norm
-    )
+
+    if (overwrite == "always") {
+      ps_cmd <- sprintf(
+        "Expand-Archive -LiteralPath '%s' -DestinationPath '%s' -Force",
+        zip_norm, dir_norm
+      )
+      output <- system2("powershell",
+                         c("-NoProfile", "-NonInteractive", "-Command", ps_cmd),
+                         stdout = TRUE, stderr = TRUE)
+      exit_code <- attr(output, "status")
+      if (!is.null(exit_code) && exit_code != 0) {
+        stop(sprintf("[DROPBOX] Uitpakken mislukt: %s", paste(output, collapse = "\n")))
+      }
+      return(invisible(NULL))
+    }
+
+    # Selectieve extractie via .NET ZipArchive
+    ps_script <- tempfile(fileext = ".ps1")
+    on.exit(unlink(ps_script), add = TRUE)
+
+    zip_ps <- gsub("'", "''", zip_norm)
+    dir_ps <- gsub("'", "''", dir_norm)
+
+    writeLines(c(
+      sprintf("$ZipPath = '%s'", zip_ps),
+      sprintf("$DestDir = '%s'", dir_ps),
+      sprintf("$Mode = '%s'", overwrite),
+      "Add-Type -AssemblyName System.IO.Compression.FileSystem",
+      "$zip = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)",
+      "$extracted = 0; $skipped = 0",
+      "try {",
+      "  foreach ($entry in $zip.Entries) {",
+      "    if ($entry.FullName.EndsWith('/')) { continue }",
+      "    $target = [System.IO.Path]::GetFullPath(",
+      "      [System.IO.Path]::Combine($DestDir, $entry.FullName))",
+      "    $dir = [System.IO.Path]::GetDirectoryName($target)",
+      "    if (-not [System.IO.Directory]::Exists($dir)) {",
+      "      [System.IO.Directory]::CreateDirectory($dir) | Out-Null",
+      "    }",
+      "    if ([System.IO.File]::Exists($target)) {",
+      "      $skip = $false",
+      "      switch ($Mode) {",
+      "        'missing' { $skip = $true }",
+      "        'changed' {",
+      "          $fi = New-Object System.IO.FileInfo($target)",
+      "          $skip = ($fi.Length -eq $entry.Length)",
+      "        }",
+      "        'newer' {",
+      "          $fi = New-Object System.IO.FileInfo($target)",
+      "          $skip = ($entry.LastWriteTime.UtcDateTime -le $fi.LastWriteTimeUtc)",
+      "        }",
+      "      }",
+      "      if ($skip) { $skipped++; continue }",
+      "    }",
+      "    $stream = $entry.Open()",
+      "    try {",
+      "      $fs = [System.IO.File]::Create($target)",
+      "      try { $stream.CopyTo($fs) }",
+      "      finally { $fs.Dispose() }",
+      "    } finally { $stream.Dispose() }",
+      "    $extracted++",
+      "  }",
+      "} finally { $zip.Dispose() }",
+      "Write-Output ('{0}|{1}' -f $extracted, $skipped)"
+    ), ps_script, useBytes = TRUE)
+
     output <- system2("powershell",
-                       c("-NoProfile", "-NonInteractive", "-Command", ps_cmd),
+                       c("-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+                         "-File", ps_script),
                        stdout = TRUE, stderr = TRUE)
     exit_code <- attr(output, "status")
     if (!is.null(exit_code) && exit_code != 0) {
       stop(sprintf("[DROPBOX] Uitpakken mislukt: %s", paste(output, collapse = "\n")))
     }
+
+    parts <- strsplit(output[length(output)], "\\|")[[1]]
+    if (length(parts) == 2) {
+      message(sprintf("[DROPBOX] Uitgepakt: %s bestanden, %s overgeslagen",
+                      parts[1], parts[2]))
+    }
+
   } else {
-    utils::unzip(zip_path, exdir = exdir)
+    # Non-Windows: selectieve extractie via utils::unzip
+    if (overwrite == "always") {
+      utils::unzip(zip_path, exdir = exdir)
+      return(invisible(NULL))
+    }
+
+    zip_info    <- utils::unzip(zip_path, list = TRUE)
+    zip_files   <- zip_info$Name[!grepl("/$", zip_info$Name)]
+    to_extract  <- character(0)
+
+    for (f in zip_files) {
+      local_path <- file.path(exdir, f)
+      if (!file.exists(local_path)) {
+        to_extract <- c(to_extract, f)
+        next
+      }
+
+      skip <- FALSE
+      if (overwrite == "missing") {
+        skip <- TRUE
+      } else if (overwrite == "changed") {
+        local_size <- file.info(local_path)$size
+        zip_size   <- zip_info$Length[zip_info$Name == f]
+        skip <- !is.na(local_size) && local_size == zip_size
+      } else if (overwrite == "newer") {
+        local_mtime <- file.info(local_path)$mtime
+        zip_date    <- zip_info$Date[zip_info$Name == f]
+        skip <- !is.na(local_mtime) && !is.na(zip_date) && zip_date <= local_mtime
+      }
+
+      if (!skip) to_extract <- c(to_extract, f)
+    }
+
+    n_skipped <- length(zip_files) - length(to_extract)
+    if (length(to_extract) > 0) {
+      utils::unzip(zip_path, files = to_extract, exdir = exdir)
+    }
+    message(sprintf("[DROPBOX] Uitgepakt: %d bestanden, %d overgeslagen",
+                    length(to_extract), n_skipped))
   }
+
+  invisible(NULL)
 }
 
 
@@ -46,6 +159,16 @@
 #'   wordt automatisch een token opgehaald via [dropbox_token()].
 #' @param keep_zip Logisch. Indien `TRUE`, wordt de zip na uitpakken bewaard.
 #'   Standaard `FALSE` (zip wordt verwijderd na uitpakken).
+#' @param overwrite Bepaalt welke bestanden uitgepakt worden als ze lokaal
+#'   al bestaan:
+#'   \describe{
+#'     \item{`"always"`}{Pak alles uit, ongeacht wat er lokaal staat.}
+#'     \item{`"missing"`}{Sla bestanden over die lokaal al bestaan.}
+#'     \item{`"changed"`}{Alleen ontbrekende bestanden en bestanden
+#'       waarvan de grootte verschilt.}
+#'     \item{`"newer"`}{Alleen ontbrekende bestanden en bestanden
+#'       waarvan de zip-versie nieuwer is dan de lokale (standaard).}
+#'   }
 #'
 #' @return Invisibly het lokale pad van de uitgepakte map.
 #'
@@ -54,8 +177,11 @@
 #' endpoint tot maximaal 10.000 bestanden of 20GB per aanroep. Grotere mappen
 #' geven een API-fout; gebruik dan [dropbox_download_folder_zip()].
 #'
-#' De zip wordt tijdelijk opgeslagen in `local_folder` en na uitpakken
-#' verwijderd (tenzij `keep_zip = TRUE`).
+#' De zip wordt altijd volledig gedownload (Dropbox biedt geen server-side
+#' filtering). Bij `overwrite` anders dan `"always"` worden bestanden
+#' selectief uitgepakt: alleen bestanden die lokaal ontbreken of verouderd
+#' zijn worden overschreven. Op Windows wordt .NET `ZipArchive` gebruikt
+#' voor selectieve extractie met ondersteuning voor lange paden.
 #'
 #' @section Authenticatie:
 #' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
@@ -63,18 +189,29 @@
 #'
 #' @seealso
 #' [dropbox_download_folder_zip()] voor grote mappen die automatisch per
-#' submap worden gesplitst.
+#' submap worden gesplitst. \cr
+#' [dropbox_download_folder()] voor per-bestand downloaden met
+#' `overwrite`-filtering voor de download.
 #'
 #' @export
 #'
 #' @examples
 #' \dontrun{
+#' # Hele map downloaden en uitpakken
 #' dropbox_download_zip(
 #'   dropbox_folder = "/data/parquet/year=2024",
 #'   local_folder   = "D:/lokaal/parquet/year=2024"
 #' )
+#'
+#' # Alleen nieuwere bestanden overschrijven
+#' dropbox_download_zip(
+#'   dropbox_folder = "/data/parquet",
+#'   local_folder   = "D:/lokaal/parquet",
+#'   overwrite      = "newer"
+#' )
 #' }
-dropbox_download_zip <- function(dropbox_folder, local_folder, token = dropbox_token(), keep_zip = FALSE) {
+dropbox_download_zip <- function(dropbox_folder, local_folder, token = dropbox_token(),
+                                  keep_zip = FALSE, overwrite = "newer") {
 
   local_folder_long <- .win_long_path(local_folder)
   if (!dir.exists(local_folder_long)) dir.create(local_folder_long, recursive = TRUE)
@@ -106,7 +243,7 @@ dropbox_download_zip <- function(dropbox_folder, local_folder, token = dropbox_t
   }
 
   message(sprintf("[DROPBOX] Uitpakken naar %s ...", local_folder))
-  .unzip_safe(zip_path, local_folder)
+  .unzip_safe(zip_path, local_folder, overwrite = overwrite)
 
   if (!keep_zip) file.remove(zip_long)
 
@@ -131,6 +268,9 @@ dropbox_download_zip <- function(dropbox_folder, local_folder, token = dropbox_t
 #'   wordt automatisch een token opgehaald via [dropbox_token()].
 #' @param keep_zip Logisch. Indien `TRUE`, worden de zip-bestanden na uitpakken
 #'   bewaard. Standaard `FALSE`.
+#' @param overwrite Bepaalt welke bestanden uitgepakt worden als ze lokaal
+#'   al bestaan. Wordt doorgegeven aan [dropbox_download_zip()].
+#'   Zie daar voor opties. Standaard `"newer"`.
 #'
 #' @return Invisibly een character vector van lokale paden van uitgepakte mappen.
 #'
@@ -163,8 +303,16 @@ dropbox_download_zip <- function(dropbox_folder, local_folder, token = dropbox_t
 #'   dropbox_folder = "/Datasets/EODHD/hulp",
 #'   local_folder   = "D:/lokaal/hulp"
 #' )
+#'
+#' # Alleen nieuwere bestanden overschrijven
+#' dropbox_download_folder_zip(
+#'   dropbox_folder = "/Datasets/EODHD/hulp",
+#'   local_folder   = "D:/lokaal/hulp",
+#'   overwrite      = "newer"
+#' )
 #' }
-dropbox_download_folder_zip <- function(dropbox_folder, local_folder, token = dropbox_token(), keep_zip = FALSE) {
+dropbox_download_folder_zip <- function(dropbox_folder, local_folder, token = dropbox_token(),
+                                         keep_zip = FALSE, overwrite = "newer") {
 
   local_folder_long <- .win_long_path(local_folder)
   if (!dir.exists(local_folder_long)) dir.create(local_folder_long, recursive = TRUE)
@@ -205,7 +353,8 @@ dropbox_download_folder_zip <- function(dropbox_folder, local_folder, token = dr
   if (length(file_entries) > 0) {
     message(sprintf("[DROPBOX] Bestanden in rootmap downloaden als zip..."))
     tryCatch({
-      dropbox_download_zip(dropbox_folder, local_folder, token, keep_zip = keep_zip)
+      dropbox_download_zip(dropbox_folder, local_folder, token,
+                           keep_zip = keep_zip, overwrite = overwrite)
       downloaded <- c(downloaded, local_folder)
     }, error = function(e) {
       warning(sprintf("[DROPBOX] Rootmap zip mislukt: %s", e$message))
@@ -221,7 +370,8 @@ dropbox_download_folder_zip <- function(dropbox_folder, local_folder, token = dr
     sub_local  <- file.path(local_folder, basename(folder$path_lower))
 
     tryCatch({
-      dropbox_download_zip(sub_remote, sub_local, token, keep_zip = keep_zip)
+      dropbox_download_zip(sub_remote, sub_local, token,
+                           keep_zip = keep_zip, overwrite = overwrite)
       downloaded <- c(downloaded, sub_local)
     }, error = function(e) {
       warning(sprintf(

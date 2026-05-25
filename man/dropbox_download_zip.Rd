@@ -8,7 +8,8 @@ dropbox_download_zip(
   dropbox_folder,
   local_folder,
   token = dropbox_token(),
-  keep_zip = FALSE
+  keep_zip = FALSE,
+  overwrite = "newer"
 )
 }
 \arguments{
@@ -23,6 +24,17 @@ wordt automatisch een token opgehaald via \code{\link[=dropbox_token]{dropbox_to
 
 \item{keep_zip}{Logisch. Indien \code{TRUE}, wordt de zip na uitpakken bewaard.
 Standaard \code{FALSE} (zip wordt verwijderd na uitpakken).}
+
+\item{overwrite}{Bepaalt welke bestanden uitgepakt worden als ze lokaal
+al bestaan:
+\describe{
+\item{\code{"always"}}{Pak alles uit, ongeacht wat er lokaal staat.}
+\item{\code{"missing"}}{Sla bestanden over die lokaal al bestaan.}
+\item{\code{"changed"}}{Alleen ontbrekende bestanden en bestanden
+waarvan de grootte verschilt.}
+\item{\code{"newer"}}{Alleen ontbrekende bestanden en bestanden
+waarvan de zip-versie nieuwer is dan de lokale (standaard).}
+}}
 }
 \value{
 Invisibly het lokale pad van de uitgepakte map.
@@ -41,8 +53,11 @@ Gebruikt het \verb{/2/files/download_zip} endpoint. Dropbox limiteert dit
 endpoint tot maximaal 10.000 bestanden of 20GB per aanroep. Grotere mappen
 geven een API-fout; gebruik dan \code{\link[=dropbox_download_folder_zip]{dropbox_download_folder_zip()}}.
 
-De zip wordt tijdelijk opgeslagen in \code{local_folder} en na uitpakken
-verwijderd (tenzij \code{keep_zip = TRUE}).
+De zip wordt altijd volledig gedownload (Dropbox biedt geen server-side
+filtering). Bij \code{overwrite} anders dan \code{"always"} worden bestanden
+selectief uitgepakt: alleen bestanden die lokaal ontbreken of verouderd
+zijn worden overschreven. Op Windows wordt .NET \code{ZipArchive} gebruikt
+voor selectieve extractie met ondersteuning voor lange paden.
 }
 \section{Authenticatie}{
 
@@ -52,13 +67,23 @@ Zie \code{\link[=dropbox_token]{dropbox_token()}} voor het instellen van de beno
 
 \examples{
 \dontrun{
+# Hele map downloaden en uitpakken
 dropbox_download_zip(
   dropbox_folder = "/data/parquet/year=2024",
   local_folder   = "D:/lokaal/parquet/year=2024"
+)
+
+# Alleen nieuwere bestanden overschrijven
+dropbox_download_zip(
+  dropbox_folder = "/data/parquet",
+  local_folder   = "D:/lokaal/parquet",
+  overwrite      = "newer"
 )
 }
 }
 \seealso{
 \code{\link[=dropbox_download_folder_zip]{dropbox_download_folder_zip()}} voor grote mappen die automatisch per
-submap worden gesplitst.
+submap worden gesplitst. \cr
+\code{\link[=dropbox_download_folder]{dropbox_download_folder()}} voor per-bestand downloaden met
+\code{overwrite}-filtering voor de download.
 }
