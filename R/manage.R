@@ -14,7 +14,7 @@
 #' @param dropbox_path Pad op Dropbox van het te verwijderen item, bijv.
 #'   `"/data/oud_bestand.csv"` of `"/temp"`. Moet beginnen met `/`.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #'
 #' @return Invisibly de metadata van het verwijderde item als lijst.
 #'
@@ -27,12 +27,12 @@
 #' Gooit een fout als het pad niet bestaat of bij onvoldoende rechten.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_exists()] om te controleren of een pad bestaat voor het verwijderen. \cr
-#' [dropbox_move()] om een item te verplaatsen in plaats van te verwijderen.
+#' [RLdrop::dropbox_exists()] om te controleren of een pad bestaat voor het verwijderen. \cr
+#' [RLdrop::dropbox_move()] om een item te verplaatsen in plaats van te verwijderen.
 #'
 #' @export
 #'
@@ -89,7 +89,7 @@ dropbox_delete <- function(dropbox_path, token = dropbox_token()) {
 #' @param to_path Nieuw pad op Dropbox, bijv. `"/archief/oud.csv"` of
 #'   `"/data/nieuw.csv"` (voor hernoemen). Moet beginnen met `/`.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #' @param allow_ownership_transfer Logisch. Indien `TRUE`, staat Dropbox toe
 #'   dat eigendom van het item wordt overgedragen bij verplaatsing naar een
 #'   gedeelde map van een andere gebruiker. Standaard `FALSE`.
@@ -100,18 +100,18 @@ dropbox_delete <- function(dropbox_path, token = dropbox_token()) {
 #' Gebruikt het `/2/files/move_v2` endpoint. Bij het verplaatsen van een
 #' map worden alle bestanden en submappen mee verplaatst. Eventuele
 #' bovenliggende mappen op het doelpad worden niet automatisch aangemaakt —
-#' gebruik [dropbox_create_folder()] als het doelpad nog niet bestaat.
+#' gebruik [RLdrop::dropbox_create_folder()] als het doelpad nog niet bestaat.
 #'
 #' Gooit een fout als het bronpad niet bestaat, het doelpad al bezet is,
 #' of bij onvoldoende rechten.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_delete()] om een item te verwijderen. \cr
-#' [dropbox_create_folder()] om een doelmap aan te maken.
+#' [RLdrop::dropbox_delete()] om een item te verwijderen. \cr
+#' [RLdrop::dropbox_create_folder()] om een doelmap aan te maken.
 #'
 #' @export
 #'
@@ -169,25 +169,25 @@ dropbox_move <- function(from_path, to_path, token = dropbox_token(),
 #' @param dropbox_path Pad van de aan te maken map, bijv.
 #'   `"/projecten/2026/Q3"`. Moet beginnen met `/`.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #'
 #' @return Invisibly de metadata van de aangemaakte map als lijst.
 #'
 #' @details
 #' Gebruikt het `/2/files/create_folder_v2` endpoint met
 #' `autorename = FALSE`. Gooit een fout als het pad al bestaat. Gebruik
-#' [dropbox_exists()] om eerst te controleren of de map al bestaat.
+#' [RLdrop::dropbox_exists()] om eerst te controleren of de map al bestaat.
 #'
 #' Tussenliggende mappen in het pad worden automatisch aangemaakt door de
 #' Dropbox API.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_exists()] om te controleren of een map al bestaat. \cr
-#' [dropbox_delete()] om een map te verwijderen.
+#' [RLdrop::dropbox_exists()] om te controleren of een map al bestaat. \cr
+#' [RLdrop::dropbox_delete()] om een map te verwijderen.
 #'
 #' @export
 #'
@@ -240,7 +240,7 @@ dropbox_create_folder <- function(dropbox_path, token = dropbox_token()) {
 #' @param to_path Doelpad op Dropbox, bijv. `"/archief/rapport.csv"`.
 #'   Moet beginnen met `/`.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #' @param allow_ownership_transfer Logisch. Indien `TRUE`, staat Dropbox toe
 #'   dat eigendom van het item wordt overgedragen bij kopiëren naar een
 #'   gedeelde map van een andere gebruiker. Standaard `FALSE`.
@@ -251,18 +251,18 @@ dropbox_create_folder <- function(dropbox_path, token = dropbox_token()) {
 #' Gebruikt het `/2/files/copy_v2` endpoint. Bij het kopiëren van een
 #' map worden alle bestanden en submappen mee gekopieerd. Eventuele
 #' bovenliggende mappen op het doelpad worden niet automatisch aangemaakt —
-#' gebruik [dropbox_create_folder()] als het doelpad nog niet bestaat.
+#' gebruik [RLdrop::dropbox_create_folder()] als het doelpad nog niet bestaat.
 #'
 #' Gooit een fout als het bronpad niet bestaat, het doelpad al bezet is,
 #' of bij onvoldoende rechten.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_move()] om een item te verplaatsen in plaats van te kopiëren. \cr
-#' [dropbox_delete()] om een item te verwijderen.
+#' [RLdrop::dropbox_move()] om een item te verplaatsen in plaats van te kopiëren. \cr
+#' [RLdrop::dropbox_delete()] om een item te verwijderen.
 #'
 #' @export
 #'

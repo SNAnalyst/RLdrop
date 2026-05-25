@@ -145,18 +145,18 @@
 #' @description
 #' Downloadt een Dropbox-map in zijn geheel als zip via het `/files/download_zip`
 #' endpoint. Aanzienlijk sneller dan per-bestand downloaden via
-#' [dropbox_download_folder()]. De zip wordt lokaal uitgepakt en daarna
+#' [RLdrop::dropbox_download_folder()]. De zip wordt lokaal uitgepakt en daarna
 #' verwijderd.
 #'
 #' Bij mappen groter dan de Dropbox-limiet (10.000 bestanden of 20GB) gebruik
-#' dan [dropbox_download_folder_zip()] die automatisch per submap splitst.
+#' dan [RLdrop::dropbox_download_folder_zip()] die automatisch per submap splitst.
 #'
 #' @param dropbox_folder Pad naar de map op Dropbox, bijv. `"/data/parquet"`.
 #'   Moet beginnen met `/`.
 #' @param local_folder Lokaal pad waar de inhoud van de zip wordt uitgepakt.
 #'   Wordt aangemaakt als deze nog niet bestaat.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #' @param keep_zip Logisch. Indien `TRUE`, wordt de zip na uitpakken bewaard.
 #'   Standaard `FALSE` (zip wordt verwijderd na uitpakken).
 #' @param overwrite Bepaalt welke bestanden uitgepakt worden als ze lokaal
@@ -175,7 +175,7 @@
 #' @details
 #' Gebruikt het `/2/files/download_zip` endpoint. Dropbox limiteert dit
 #' endpoint tot maximaal 10.000 bestanden of 20GB per aanroep. Grotere mappen
-#' geven een API-fout; gebruik dan [dropbox_download_folder_zip()].
+#' geven een API-fout; gebruik dan [RLdrop::dropbox_download_folder_zip()].
 #'
 #' De zip wordt altijd volledig gedownload (Dropbox biedt geen server-side
 #' filtering). Bij `overwrite` anders dan `"always"` worden bestanden
@@ -184,13 +184,13 @@
 #' voor selectieve extractie met ondersteuning voor lange paden.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_download_folder_zip()] voor grote mappen die automatisch per
+#' [RLdrop::dropbox_download_folder_zip()] voor grote mappen die automatisch per
 #' submap worden gesplitst. \cr
-#' [dropbox_download_folder()] voor per-bestand downloaden met
+#' [RLdrop::dropbox_download_folder()] voor per-bestand downloaden met
 #' `overwrite`-filtering voor de download.
 #'
 #' @export
@@ -258,18 +258,18 @@ dropbox_download_zip <- function(dropbox_folder, local_folder, token = dropbox_t
 #' Downloadt een grote Dropbox-map door elke directe submap afzonderlijk als
 #' zip te downloaden en lokaal uit te pakken. Omzeilt de Dropbox-limiet van
 #' 10.000 bestanden per zip-download. Veel sneller dan per-bestand downloaden
-#' via [dropbox_download_folder()].
+#' via [RLdrop::dropbox_download_folder()].
 #'
 #' @param dropbox_folder Pad naar de rootmap op Dropbox, bijv.
 #'   `"/Datasets/EODHD/hulp"`. Moet beginnen met `/`.
 #' @param local_folder Lokaal pad van de doelmap. Wordt aangemaakt als deze
 #'   nog niet bestaat.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #' @param keep_zip Logisch. Indien `TRUE`, worden de zip-bestanden na uitpakken
 #'   bewaard. Standaard `FALSE`.
 #' @param overwrite Bepaalt welke bestanden uitgepakt worden als ze lokaal
-#'   al bestaan. Wordt doorgegeven aan [dropbox_download_zip()].
+#'   al bestaan. Wordt doorgegeven aan [RLdrop::dropbox_download_zip()].
 #'   Zie daar voor opties. Standaard `"newer"`.
 #'
 #' @return Invisibly een character vector van lokale paden van uitgepakte mappen.
@@ -277,22 +277,22 @@ dropbox_download_zip <- function(dropbox_folder, local_folder, token = dropbox_t
 #' @details
 #' De functie haalt eerst de directe submappen op via de Dropbox API
 #' (niet recursief). Elke submap wordt daarna als zip gedownload via
-#' [dropbox_download_zip()].
+#' [RLdrop::dropbox_download_zip()].
 #'
 #' Als een submap zelf ook groter is dan 10.000 bestanden of 20GB, zal die
 #' individuele zip-download mislukken met een API-fout. In dat geval moet je
 #' de functie aanroepen op een dieper niveau, bijv. een specifieke submap.
 #'
 #' Bestanden direct in de rootmap (niet in een submap) worden gedownload via
-#' [dropbox_download_zip()] op de rootmap zelf.
+#' [RLdrop::dropbox_download_zip()] op de rootmap zelf.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_download_zip()] voor het downloaden van een enkele map als zip.\cr
-#' [dropbox_download_folder()] voor per-bestand downloaden met voortgangsbalk.
+#' [RLdrop::dropbox_download_zip()] voor het downloaden van een enkele map als zip.\cr
+#' [RLdrop::dropbox_download_folder()] voor per-bestand downloaden met voortgangsbalk.
 #'
 #' @export
 #'

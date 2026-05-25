@@ -9,7 +9,7 @@
 #' @description
 #' Uploadt één bestand rechtstreeks via de Dropbox API v2. Geschikt voor
 #' bestanden kleiner dan 150MB. Voor grotere bestanden, gebruik
-#' [dropbox_upload_large_file()] of de automatische wrapper [dropbox_upload()].
+#' [RLdrop::dropbox_upload_large_file()] of de automatische wrapper [RLdrop::dropbox_upload()].
 #'
 #' @param local_path Volledig lokaal pad van het te uploaden bestand,
 #'   bijv. `"D:/data/bestand.parquet"`. Gooit een fout als het bestand
@@ -17,7 +17,7 @@
 #' @param dropbox_path Doelpad op Dropbox inclusief bestandsnaam,
 #'   bijv. `"/data/bestand.parquet"`. Moet beginnen met `/`.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #' @param mode Schrijfmodus als character string. Opties:
 #'   \describe{
 #'     \item{`"overwrite"`}{Overschrijft een bestaand bestand (standaard).}
@@ -31,19 +31,19 @@
 #' @details
 #' Gebruikt het `/2/files/upload` endpoint van de Dropbox Content API.
 #' De Dropbox API heeft een maximale bestandsgrootte van 150MB voor dit
-#' endpoint. Gebruik [dropbox_upload_large_file()] voor grotere bestanden,
-#' of [dropbox_upload()] als automatische wrapper die de keuze maakt op
+#' endpoint. Gebruik [RLdrop::dropbox_upload_large_file()] voor grotere bestanden,
+#' of [RLdrop::dropbox_upload()] als automatische wrapper die de keuze maakt op
 #' basis van bestandsgrootte.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()],
-#' die de credentials leest uit omgevingsvariabelen. Zie [dropbox_token()]
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()],
+#' die de credentials leest uit omgevingsvariabelen. Zie [RLdrop::dropbox_token()]
 #' voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_upload()] voor automatische keuze tussen gewone en chunked upload. \cr
-#' [dropbox_upload_large_file()] voor bestanden groter dan 150MB. \cr
-#' [dropbox_upload_folder()] voor het uploaden van een volledige map.
+#' [RLdrop::dropbox_upload()] voor automatische keuze tussen gewone en chunked upload. \cr
+#' [RLdrop::dropbox_upload_large_file()] voor bestanden groter dan 150MB. \cr
+#' [RLdrop::dropbox_upload_folder()] voor het uploaden van een volledige map.
 #'
 #' @export
 #'
@@ -106,14 +106,14 @@ dropbox_upload_file <- function(local_path, dropbox_path, token = dropbox_token(
 #' @description
 #' Uploadt bestanden groter dan 150MB naar Dropbox via de upload session API,
 #' waarbij het bestand in chunks wordt verstuurd. Toont voortgang per chunk.
-#' Voor kleinere bestanden is [dropbox_upload_file()] efficiënter.
+#' Voor kleinere bestanden is [RLdrop::dropbox_upload_file()] efficiënter.
 #'
 #' @param local_path Volledig lokaal pad van het te uploaden bestand.
 #'   Gooit een fout als het bestand niet bestaat.
 #' @param dropbox_path Doelpad op Dropbox inclusief bestandsnaam,
 #'   bijv. `"/data/groot_bestand.csv"`. Moet beginnen met `/`.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #' @param chunk_size Grootte van elk upload-chunk in bytes. Standaard 128MB
 #'   (`128 * 1024 * 1024`). Grotere chunks zijn sneller maar kwetsbaarder
 #'   voor netwerkfouten; kleinere chunks zijn robuuster maar langzamer.
@@ -148,13 +148,13 @@ dropbox_upload_file <- function(local_path, dropbox_path, token = dropbox_token(
 #' mislukte upload wordt niet automatisch hervat; start opnieuw bij fout.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_upload()] als automatische wrapper die kiest op bestandsgrootte. \cr
-#' [dropbox_upload_file()] voor bestanden kleiner dan 150MB. \cr
-#' [dropbox_upload_folder()] voor het uploaden van een volledige map.
+#' [RLdrop::dropbox_upload()] als automatische wrapper die kiest op bestandsgrootte. \cr
+#' [RLdrop::dropbox_upload_file()] voor bestanden kleiner dan 150MB. \cr
+#' [RLdrop::dropbox_upload_folder()] voor het uploaden van een volledige map.
 #'
 #' @export
 #'
@@ -292,8 +292,8 @@ dropbox_upload_large_file <- function(local_path, dropbox_path, token = dropbox_
 #' Upload een bestand naar Dropbox, kiest automatisch gewone of chunked upload
 #'
 #' @description
-#' Automatische wrapper rond [dropbox_upload_file()] en
-#' [dropbox_upload_large_file()]. Bepaalt op basis van de bestandsgrootte
+#' Automatische wrapper rond [RLdrop::dropbox_upload_file()] en
+#' [RLdrop::dropbox_upload_large_file()]. Bepaalt op basis van de bestandsgrootte
 #' welke uploadmethode wordt gebruikt. Dit is de aanbevolen functie voor
 #' enkelvoudige uploads.
 #'
@@ -301,7 +301,7 @@ dropbox_upload_large_file <- function(local_path, dropbox_path, token = dropbox_
 #' @param dropbox_path Doelpad op Dropbox inclusief bestandsnaam.
 #'   Moet beginnen met `/`.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #' @param mode Schrijfmodus: `"overwrite"` (standaard), `"add"`, of `"update"`.
 #' @param large_file_threshold Drempel in bytes waarboven de chunked upload
 #'   session wordt gebruikt. Standaard 140MB (`140 * 1024 * 1024`).
@@ -312,18 +312,18 @@ dropbox_upload_large_file <- function(local_path, dropbox_path, token = dropbox_
 #' @details
 #' De keuze tussen uploadmethoden:
 #' \itemize{
-#'   \item Bestandsgrootte < `large_file_threshold`: [dropbox_upload_file()]
-#'   \item Bestandsgrootte >= `large_file_threshold`: [dropbox_upload_large_file()]
+#'   \item Bestandsgrootte < `large_file_threshold`: [RLdrop::dropbox_upload_file()]
+#'   \item Bestandsgrootte >= `large_file_threshold`: [RLdrop::dropbox_upload_large_file()]
 #' }
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_upload_file()] voor kleine bestanden. \cr
-#' [dropbox_upload_large_file()] voor grote bestanden. \cr
-#' [dropbox_upload_folder()] voor het uploaden van een volledige map.
+#' [RLdrop::dropbox_upload_file()] voor kleine bestanden. \cr
+#' [RLdrop::dropbox_upload_large_file()] voor grote bestanden. \cr
+#' [RLdrop::dropbox_upload_folder()] voor het uploaden van een volledige map.
 #'
 #' @export
 #'
@@ -360,7 +360,7 @@ dropbox_upload <- function(local_path, dropbox_path, token = dropbox_token(),
 #'
 #' @description
 #' Uploadt alle bestanden in een lokale map naar een Dropbox-map. Optioneel
-#' recursief voor submappen. Gebruikt [dropbox_upload()] per bestand, zodat
+#' recursief voor submappen. Gebruikt [RLdrop::dropbox_upload()] per bestand, zodat
 #' grote bestanden automatisch via chunked upload worden verstuurd.
 #'
 #' Individuele bestanden die niet geupload kunnen worden worden overgeslagen
@@ -372,14 +372,14 @@ dropbox_upload <- function(local_path, dropbox_path, token = dropbox_token(),
 #' @param dropbox_folder Doelmap op Dropbox, bijv. `"/data/parquet"`.
 #'   Moet beginnen met `/`. De map hoeft niet al te bestaan op Dropbox.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #' @param recursive Logisch. Indien `TRUE`, worden bestanden in submappen
 #'   ook geupload en wordt de mapstructuur gerepliceerd op Dropbox.
 #'   Standaard `FALSE`.
 #' @param mode Schrijfmodus: `"overwrite"` (standaard), `"add"`, of `"update"`.
 #' @param large_file_threshold Drempel in bytes waarboven chunked upload
 #'   wordt gebruikt per bestand. Standaard 140MB. Doorgegeven aan
-#'   [dropbox_upload()].
+#'   [RLdrop::dropbox_upload()].
 #' @param overwrite Bepaalt welke bestanden geupload worden als ze al op
 #'   Dropbox staan:
 #'   \describe{
@@ -413,14 +413,14 @@ dropbox_upload <- function(local_path, dropbox_path, token = dropbox_token(),
 #' worden verzameld en als [warning()] gerapporteerd na afloop.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_upload()] voor het uploaden van een enkel bestand. \cr
-#' [dropbox_upload_large_file()] voor grote bestanden. \cr
-#' [dropbox_download_folder()] voor het downloaden van een map. \cr
-#' [dropbox_compare_folder()] om een lokale map te vergelijken met Dropbox.
+#' [RLdrop::dropbox_upload()] voor het uploaden van een enkel bestand. \cr
+#' [RLdrop::dropbox_upload_large_file()] voor grote bestanden. \cr
+#' [RLdrop::dropbox_download_folder()] voor het downloaden van een map. \cr
+#' [RLdrop::dropbox_compare_folder()] om een lokale map te vergelijken met Dropbox.
 #'
 #' @export
 #'

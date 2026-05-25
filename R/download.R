@@ -17,7 +17,7 @@
 #'   opgeslagen wordt, bijv. `"D:/lokaal/bestand.parquet"`. De bovenliggende
 #'   map moet al bestaan.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #'
 #' @return Invisibly het lokale pad (`local_path`) als character string.
 #'   Wordt aangeroepen voor zijn neveneffect (bestand schrijven naar schijf).
@@ -31,11 +31,11 @@
 #' functie een fout met de volledige API-foutmelding als bericht.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_download_folder()] om een volledige map te downloaden.
+#' [RLdrop::dropbox_download_folder()] om een volledige map te downloaden.
 #'
 #' @export
 #'
@@ -165,7 +165,7 @@ dropbox_download_file <- function(dropbox_path, local_path, token = dropbox_toke
 #' @param local_folder Lokaal pad van de doelmap. Wordt aangemaakt als deze
 #'   nog niet bestaat, inclusief bovenliggende mappen.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #' @param recursive Logisch. Indien `TRUE`, worden submappen ook gedownload
 #'   en wordt de mapstructuur lokaal gerepliceerd. Standaard `FALSE`.
 #' @param overwrite Bepaalt welke bestanden gedownload worden als ze lokaal
@@ -189,7 +189,7 @@ dropbox_download_file <- function(dropbox_path, local_path, token = dropbox_toke
 #' \enumerate{
 #'   \item Alle bestandsitems worden eerst volledig geinventariseerd via de
 #'     Dropbox `list_folder` API (inclusief paginering bij >2000 items).
-#'   \item Bestanden worden gedownload via [dropbox_download_file()] met
+#'   \item Bestanden worden gedownload via [RLdrop::dropbox_download_file()] met
 #'     een voortgangsbalk. Bij `overwrite` anders dan `"always"` worden
 #'     bestanden die al lokaal aanwezig zijn overgeslagen.
 #'   \item Een samenvatting wordt getoond: gedownload, overgeslagen, en
@@ -207,12 +207,12 @@ dropbox_download_file <- function(dropbox_path, local_path, token = dropbox_toke
 #' eind gemeld via [warning()].
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_download_file()] voor het downloaden van een enkel bestand. \cr
-#' [dropbox_compare_folder()] om een lokale map te vergelijken met Dropbox.
+#' [RLdrop::dropbox_download_file()] voor het downloaden van een enkel bestand. \cr
+#' [RLdrop::dropbox_compare_folder()] om een lokale map te vergelijken met Dropbox.
 #'
 #' @export
 #'

@@ -13,7 +13,7 @@
 #' @param dropbox_path Pad op Dropbox, bijv. `"/data/bestand.parquet"` of
 #'   `"/data"`. Moet beginnen met `/`.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #'
 #' @return `TRUE` als het pad bestaat, `FALSE` als het niet bestaat.
 #'
@@ -23,11 +23,11 @@
 #' API-fouten (bijv. ongeldige token) gooien wel een fout.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_file_info()] voor volledige metadata van een bestand.
+#' [RLdrop::dropbox_file_info()] voor volledige metadata van een bestand.
 #'
 #' @export
 #'
@@ -82,7 +82,7 @@ dropbox_exists <- function(dropbox_path, token = dropbox_token()) {
 #' @param dropbox_path Pad op Dropbox, bijv. `"/data/bestand.parquet"` of
 #'   `"/data"`. Moet beginnen met `/`.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #'
 #' @return Een lijst met de volgende elementen:
 #' \describe{
@@ -98,16 +98,16 @@ dropbox_exists <- function(dropbox_path, token = dropbox_token()) {
 #'
 #' @details
 #' Gebruikt het `/2/files/get_metadata` endpoint. Gooit een fout als het pad
-#' niet bestaat. Gebruik [dropbox_exists()] om eerst te controleren of het
+#' niet bestaat. Gebruik [RLdrop::dropbox_exists()] om eerst te controleren of het
 #' pad bestaat.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_exists()] om te controleren of een pad bestaat. \cr
-#' [dropbox_list_folder()] voor metadata van alle items in een map.
+#' [RLdrop::dropbox_exists()] om te controleren of een pad bestaat. \cr
+#' [RLdrop::dropbox_list_folder()] voor metadata van alle items in een map.
 #'
 #' @export
 #'

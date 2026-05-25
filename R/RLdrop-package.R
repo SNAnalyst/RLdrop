@@ -12,45 +12,45 @@
 #'
 #' @section Authenticatie:
 #' Alle functies accepteren een `token` parameter die standaard automatisch
-#' wordt opgehaald via [dropbox_token()]. Stel de volgende omgevingsvariabelen
+#' wordt opgehaald via [RLdrop::dropbox_token()]. Stel de volgende omgevingsvariabelen
 #' in via `usethis::edit_r_environ()`:
 #' \itemize{
 #'   \item `DROPBOX_APP_KEY`
 #'   \item `DROPBOX_APP_SECRET`
 #'   \item `DROPBOX_REFRESH_TOKEN`
 #' }
-#' Zie [dropbox_token()] voor details.
+#' Zie [RLdrop::dropbox_token()] voor details.
 #'
 #' @section Downloaden:
 #' \itemize{
-#'   \item [dropbox_download_file()] — download een enkel bestand
-#'   \item [dropbox_download_folder()] — download een volledige map (per bestand)
-#'   \item [dropbox_download_zip()] — download een map als zip
-#'   \item [dropbox_download_folder_zip()] — download grote map per submap als zip
+#'   \item [RLdrop::dropbox_download_file()] — download een enkel bestand
+#'   \item [RLdrop::dropbox_download_folder()] — download een volledige map (per bestand)
+#'   \item [RLdrop::dropbox_download_zip()] — download een map als zip
+#'   \item [RLdrop::dropbox_download_folder_zip()] — download grote map per submap als zip
 #' }
 #'
 #' @section Uploaden:
 #' \itemize{
-#'   \item [dropbox_upload()] — upload een bestand (automatische keuze gewone/chunked)
-#'   \item [dropbox_upload_file()] — upload een klein bestand (<150MB)
-#'   \item [dropbox_upload_large_file()] — upload een groot bestand via chunked session
-#'   \item [dropbox_upload_folder()] — upload een volledige map
+#'   \item [RLdrop::dropbox_upload()] — upload een bestand (automatische keuze gewone/chunked)
+#'   \item [RLdrop::dropbox_upload_file()] — upload een klein bestand (<150MB)
+#'   \item [RLdrop::dropbox_upload_large_file()] — upload een groot bestand via chunked session
+#'   \item [RLdrop::dropbox_upload_folder()] — upload een volledige map
 #' }
 #'
 #' @section Bestandsbeheer:
 #' \itemize{
-#'   \item [dropbox_list_folder()] — mapinhoud opvragen als data.frame
-#'   \item [dropbox_exists()] — controleer of een pad bestaat
-#'   \item [dropbox_file_info()] — metadata van een enkel bestand of map
-#'   \item [dropbox_search()] — zoeken op bestandsnaam
-#'   \item [dropbox_delete()] — bestand of map verwijderen
-#'   \item [dropbox_move()] — verplaatsen of hernoemen
-#'   \item [dropbox_create_folder()] — map aanmaken
+#'   \item [RLdrop::dropbox_list_folder()] — mapinhoud opvragen als data.frame
+#'   \item [RLdrop::dropbox_exists()] — controleer of een pad bestaat
+#'   \item [RLdrop::dropbox_file_info()] — metadata van een enkel bestand of map
+#'   \item [RLdrop::dropbox_search()] — zoeken op bestandsnaam
+#'   \item [RLdrop::dropbox_delete()] — bestand of map verwijderen
+#'   \item [RLdrop::dropbox_move()] — verplaatsen of hernoemen
+#'   \item [RLdrop::dropbox_create_folder()] — map aanmaken
 #' }
 #'
 #' @section Vergelijken:
 #' \itemize{
-#'   \item [dropbox_compare_folder()] — lokale map vergelijken met Dropbox-map
+#'   \item [RLdrop::dropbox_compare_folder()] — lokale map vergelijken met Dropbox-map
 #' }
 #'
 #' @keywords internal

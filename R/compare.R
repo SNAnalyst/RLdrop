@@ -19,7 +19,7 @@
 #' @param dropbox_folder Pad naar de map op Dropbox, bijv. `"/data/parquet"`.
 #'   Moet beginnen met `/`. Gebruik `""` voor de root van je Dropbox.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #' @param recursive Logisch. Indien `TRUE`, worden submappen ook vergeleken.
 #'   Standaard `FALSE`.
 #' @param compare_date Logisch. Indien `TRUE` (standaard), wordt ook de
@@ -66,12 +66,12 @@
 #' aantal bestanden per status.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_download_folder()] om ontbrekende bestanden te downloaden. \cr
-#' [dropbox_upload_folder()] om ontbrekende bestanden te uploaden.
+#' [RLdrop::dropbox_download_folder()] om ontbrekende bestanden te downloaden. \cr
+#' [RLdrop::dropbox_upload_folder()] om ontbrekende bestanden te uploaden.
 #'
 #' @export
 #'
