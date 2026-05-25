@@ -364,28 +364,31 @@ dropbox_download_folder_zip <- function(dropbox_folder, local_folder, token = dr
   }
 
   # [ARCH] Download elke submap als aparte zip
-  pb <- utils::txtProgressBar(min = 0, max = length(folder_entries), style = 3)
+  if (length(folder_entries) > 0) {
+    pb <- utils::txtProgressBar(min = 0, max = length(folder_entries), style = 3)
 
-  for (i in seq_along(folder_entries)) {
-    folder     <- folder_entries[[i]]
-    sub_remote <- folder$path_display
-    sub_local  <- file.path(local_folder, basename(folder$path_lower))
+    for (i in seq_along(folder_entries)) {
+      folder     <- folder_entries[[i]]
+      sub_remote <- folder$path_display
+      sub_local  <- file.path(local_folder, basename(folder$path_lower))
 
-    tryCatch({
-      dropbox_download_zip(sub_remote, sub_local, token,
-                           keep_zip = keep_zip, overwrite = overwrite)
-      downloaded <- c(downloaded, sub_local)
-    }, error = function(e) {
-      warning(sprintf(
-        "[DROPBOX] Submap '%s' mislukt (mogelijk >10.000 bestanden of >20GB): %s\n  Probeer dropbox_download_folder_zip() op dit pad.",
-        sub_remote, e$message
-      ))
-    })
+      tryCatch({
+        dropbox_download_zip(sub_remote, sub_local, token,
+                             keep_zip = keep_zip, overwrite = overwrite)
+        downloaded <- c(downloaded, sub_local)
+      }, error = function(e) {
+        warning(sprintf(
+          "[DROPBOX] Submap '%s' mislukt (mogelijk >10.000 bestanden of >20GB): %s\n  Probeer dropbox_download_folder_zip() op dit pad.",
+          sub_remote, e$message
+        ))
+      })
 
-    utils::setTxtProgressBar(pb, i)
+      utils::setTxtProgressBar(pb, i)
+    }
+
+    close(pb)
   }
 
-  close(pb)
   message(sprintf("\n[DROPBOX] %d/%d submappen gedownload naar %s",
     length(downloaded), length(folder_entries), local_folder))
   invisible(downloaded)
