@@ -242,8 +242,10 @@ dropbox_download_zip <- function(dropbox_folder, local_folder, token = dropbox_t
     ))
   }
 
+  # Dropbox zip bevat de mapnaam als root-entry (bijv. "2025-2026/file.txt"),
+  # dus uitpakken naar de bovenliggende map zodat de structuur klopt.
   message(sprintf("[DROPBOX] Uitpakken naar %s ...", local_folder))
-  .unzip_safe(zip_path, local_folder, overwrite = overwrite)
+  .unzip_safe(zip_path, dirname(local_folder), overwrite = overwrite)
 
   if (!keep_zip) file.remove(zip_long)
 
