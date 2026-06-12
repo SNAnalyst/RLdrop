@@ -61,8 +61,8 @@
 #' API-aanroep mislukt (bijv. bij een ongeldige refresh token).
 #'
 #' @seealso
-#' [dropbox_download_file()], [dropbox_download_folder()],
-#' [dropbox_upload()], [dropbox_upload_folder()] voor functies die het
+#' [RLdrop::dropbox_download_file()], [RLdrop::dropbox_download_folder()],
+#' [RLdrop::dropbox_upload()], [RLdrop::dropbox_upload_folder()] voor functies die het
 #' token als argument accepteren.
 #'
 #' @export

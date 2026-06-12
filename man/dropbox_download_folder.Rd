@@ -9,6 +9,7 @@ dropbox_download_folder(
   local_folder,
   token = dropbox_token(),
   recursive = FALSE,
+  overwrite = "newer",
   pattern = NULL,
   welke = NULL
 )
@@ -26,6 +27,19 @@ wordt automatisch een token opgehaald via \code{\link[=dropbox_token]{dropbox_to
 \item{recursive}{Logisch. Indien \code{TRUE}, worden submappen ook gedownload
 en wordt de mapstructuur lokaal gerepliceerd. Standaard \code{FALSE}.}
 
+\item{overwrite}{Bepaalt welke bestanden gedownload worden als ze lokaal
+al bestaan:
+\describe{
+\item{\code{"always"}}{Download alles, ongeacht wat er lokaal staat.}
+\item{\code{"missing"}}{Sla bestanden over die lokaal al bestaan (op basis
+van naam).}
+\item{\code{"changed"}}{Download alleen ontbrekende bestanden en bestanden
+waarvan de grootte (bytes) verschilt.}
+\item{\code{"newer"}}{Download alleen ontbrekende bestanden en bestanden
+waarvan de Dropbox-versie nieuwer is dan de lokale
+(\code{client_modified} > lokale \code{mtime}) (standaard).}
+}}
+
 \item{pattern}{Optioneel character string met een reguliere expressie.
 Indien ingevuld worden alleen bestanden gedownload waarvan de Dropbox-
 bestandsnaam (\code{name} uit de Dropbox API) aan deze regex voldoet.
@@ -39,29 +53,33 @@ Dropbox API), niet met het volledige pad. Standaard \code{NULL}, waarmee niet
 op exacte bestandsnamen wordt gefilterd.}
 }
 \value{
-Invisibly een character vector van lokale paden van alle gedownloade
-bestanden.
+Invisibly een character vector van lokale paden van daadwerkelijk
+gedownloade bestanden.
 }
 \description{
 Downloadt alle bestanden in een Dropbox-map naar een lokale map. Optioneel
 recursief voor submappen. Toont een voortgangsbalk tijdens het downloaden.
 Mappen met meer dan 2000 bestanden worden automatisch gepagineerd afgehandeld.
+
+Individuele bestanden die niet gedownload kunnen worden (bijv. te lang pad,
+geen rechten) worden overgeslagen en aan het eind als waarschuwing gemeld,
+zodat de rest van de download gewoon doorgaat.
 }
 \details{
-De functie werkt in twee fasen:
+De functie werkt in drie fasen:
 \enumerate{
 \item Alle bestandsitems worden eerst volledig geinventariseerd via de
 Dropbox \code{list_folder} API (inclusief paginering bij >2000 items).
-Dit geeft het totaal aantal bestanden zodat de voortgangsbalk correct
-kan worden weergegeven.
-\item De bestanden worden gedownload via \code{\link[=dropbox_download_file]{dropbox_download_file()}} met
-een voortgangsbalk via \code{\link[utils:txtProgressBar]{utils::txtProgressBar()}}.
+\item Bestanden worden gedownload via \code{\link[=dropbox_download_file]{dropbox_download_file()}} met
+een voortgangsbalk. Bij \code{overwrite} anders dan \code{"always"} worden
+bestanden die al lokaal aanwezig zijn overgeslagen.
+\item Een samenvatting wordt getoond: gedownload, overgeslagen, en
+eventueel mislukte bestanden.
 }
 
 Bij \code{recursive = TRUE} wordt de volledige mapboomstructuur gerepliceerd in
-\code{local_folder}. Paden worden berekend via \code{path_lower} (de door Dropbox
-genormaliseerde lowercase variant) voor consistente vergelijking, en
-submappen worden aangemaakt voor het downloaden begint.
+\code{local_folder}. Op Windows worden lange paden (>260 tekens) automatisch
+afgehandeld via de \verb{\\\\?\\} prefix.
 
 Als \code{pattern} is ingevuld, wordt dit patroon alleen toegepast op de
 bestandsnaam, niet op het volledige Dropbox-pad. Dit is bewust gekozen omdat
@@ -87,8 +105,9 @@ blijkt, kan later een apart padgericht selectieargument worden toegevoegd.
 \section{Foutafhandeling}{
 
 Als het ophalen van de mapinhoud mislukt (bijv. map bestaat niet of geen
-leesrechten), gooit de functie een fout met de API-foutmelding. Individuele
-bestandsfouten worden doorgegeven vanuit \code{\link[=dropbox_download_file]{dropbox_download_file()}}.
+leesrechten), gooit de functie een fout. Individuele bestandsfouten worden
+afgevangen zodat de download doorgaat; mislukte bestanden worden aan het
+eind gemeld via \code{\link[=warning]{warning()}}.
 Een ongeldig \code{pattern}- of \code{welke}-argument geeft een fout voordat er
 downloads starten.
 }
@@ -114,6 +133,22 @@ dropbox_download_folder(
   recursive      = TRUE
 )
 
+# Alleen ontbrekende bestanden downloaden
+dropbox_download_folder(
+  dropbox_folder = "/data/parquet",
+  local_folder   = "D:/lokaal/parquet",
+  recursive      = TRUE,
+  overwrite      = "missing"
+)
+
+# Alleen gewijzigde bestanden (grootte verschilt)
+dropbox_download_folder(
+  dropbox_folder = "/data/parquet",
+  local_folder   = "D:/lokaal/parquet",
+  recursive      = TRUE,
+  overwrite      = "changed"
+)
+
 # Alleen CSV-bestanden direct in de map downloaden
 dropbox_download_folder(
   dropbox_folder = "/datasets/EODHD",
@@ -130,5 +165,6 @@ dropbox_download_folder(
 }
 }
 \seealso{
-\code{\link[=dropbox_download_file]{dropbox_download_file()}} voor het downloaden van een enkel bestand.
+\code{\link[=dropbox_download_file]{dropbox_download_file()}} voor het downloaden van een enkel bestand. \cr
+\code{\link[=dropbox_compare_folder]{dropbox_compare_folder()}} om een lokale map te vergelijken met Dropbox.
 }

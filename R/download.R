@@ -17,7 +17,7 @@
 #'   opgeslagen wordt, bijv. `"D:/lokaal/bestand.parquet"`. De bovenliggende
 #'   map moet al bestaan.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #'
 #' @return Invisibly het lokale pad (`local_path`) als character string.
 #'   Wordt aangeroepen voor zijn neveneffect (bestand schrijven naar schijf).
@@ -31,11 +31,11 @@
 #' functie een fout met de volledige API-foutmelding als bericht.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_download_folder()] om een volledige map te downloaden.
+#' [RLdrop::dropbox_download_folder()] om een volledige map te downloaden.
 #'
 #' @export
 #'
@@ -73,7 +73,7 @@ dropbox_download_file <- function(dropbox_path, local_path, token = dropbox_toke
   }
 
   # [ARCH] Schrijf binair zodat ook niet-tekstbestanden correct worden opgeslagen
-  writeBin(httr::content(response, as = "raw"), local_path)
+  writeBin(httr::content(response, as = "raw"), .win_long_path(local_path))
   invisible(local_path)
 }
 
@@ -137,6 +137,18 @@ dropbox_download_file <- function(dropbox_path, local_path, token = dropbox_toke
 }
 
 
+# Interne helper: op Windows paden >250 tekens prefixen met \\?\ zodat de
+# wide-char API wordt gebruikt en het 260-karakterlimiet vervalt.
+.win_long_path <- function(path) {
+  if (.Platform$OS.type != "windows") return(path)
+  path <- normalizePath(path, winslash = "\\", mustWork = FALSE)
+  if (nchar(path) > 250 && !startsWith(path, "\\\\?\\")) {
+    path <- paste0("\\\\?\\", path)
+  }
+  path
+}
+
+
 #' Download een volledige map van Dropbox direct via API
 #'
 #' @description
@@ -144,14 +156,30 @@ dropbox_download_file <- function(dropbox_path, local_path, token = dropbox_toke
 #' recursief voor submappen. Toont een voortgangsbalk tijdens het downloaden.
 #' Mappen met meer dan 2000 bestanden worden automatisch gepagineerd afgehandeld.
 #'
+#' Individuele bestanden die niet gedownload kunnen worden (bijv. te lang pad,
+#' geen rechten) worden overgeslagen en aan het eind als waarschuwing gemeld,
+#' zodat de rest van de download gewoon doorgaat.
+#'
 #' @param dropbox_folder Pad naar de map op Dropbox, bijv. `"/data/parquet"`.
 #'   Moet beginnen met `/`. Gebruik `""` voor de root van je Dropbox.
 #' @param local_folder Lokaal pad van de doelmap. Wordt aangemaakt als deze
 #'   nog niet bestaat, inclusief bovenliggende mappen.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #' @param recursive Logisch. Indien `TRUE`, worden submappen ook gedownload
 #'   en wordt de mapstructuur lokaal gerepliceerd. Standaard `FALSE`.
+#' @param overwrite Bepaalt welke bestanden gedownload worden als ze lokaal
+#'   al bestaan:
+#'   \describe{
+#'     \item{`"always"`}{Download alles, ongeacht wat er lokaal staat.}
+#'     \item{`"missing"`}{Sla bestanden over die lokaal al bestaan (op basis
+#'       van naam).}
+#'     \item{`"changed"`}{Download alleen ontbrekende bestanden en bestanden
+#'       waarvan de grootte (bytes) verschilt.}
+#'     \item{`"newer"`}{Download alleen ontbrekende bestanden en bestanden
+#'       waarvan de Dropbox-versie nieuwer is dan de lokale
+#'       (`client_modified` > lokale `mtime`) (standaard).}
+#'   }
 #' @param pattern Optioneel character string met een reguliere expressie.
 #'   Indien ingevuld worden alleen bestanden gedownload waarvan de Dropbox-
 #'   bestandsnaam (`name` uit de Dropbox API) aan deze regex voldoet.
@@ -163,24 +191,24 @@ dropbox_download_file <- function(dropbox_path, local_path, token = dropbox_toke
 #'   Dropbox API), niet met het volledige pad. Standaard `NULL`, waarmee niet
 #'   op exacte bestandsnamen wordt gefilterd.
 #'
-#' @return Invisibly een character vector van lokale paden van alle gedownloade
-#'   bestanden.
+#' @return Invisibly een character vector van lokale paden van daadwerkelijk
+#'   gedownloade bestanden.
 #'
 #' @details
-#' De functie werkt in twee fasen:
+#' De functie werkt in drie fasen:
 #' \enumerate{
 #'   \item Alle bestandsitems worden eerst volledig geinventariseerd via de
 #'     Dropbox `list_folder` API (inclusief paginering bij >2000 items).
-#'     Dit geeft het totaal aantal bestanden zodat de voortgangsbalk correct
-#'     kan worden weergegeven.
-#'   \item De bestanden worden gedownload via [dropbox_download_file()] met
-#'     een voortgangsbalk via [utils::txtProgressBar()].
+#'   \item Bestanden worden gedownload via [RLdrop::dropbox_download_file()] met
+#'     een voortgangsbalk. Bij `overwrite` anders dan `"always"` worden
+#'     bestanden die al lokaal aanwezig zijn overgeslagen.
+#'   \item Een samenvatting wordt getoond: gedownload, overgeslagen, en
+#'     eventueel mislukte bestanden.
 #' }
 #'
 #' Bij `recursive = TRUE` wordt de volledige mapboomstructuur gerepliceerd in
-#' `local_folder`. Paden worden berekend via `path_lower` (de door Dropbox
-#' genormaliseerde lowercase variant) voor consistente vergelijking, en
-#' submappen worden aangemaakt voor het downloaden begint.
+#' `local_folder`. Op Windows worden lange paden (>260 tekens) automatisch
+#' afgehandeld via de `\\?\` prefix.
 #'
 #' Als `pattern` is ingevuld, wordt dit patroon alleen toegepast op de
 #' bestandsnaam, niet op het volledige Dropbox-pad. Dit is bewust gekozen omdat
@@ -205,17 +233,19 @@ dropbox_download_file <- function(dropbox_path, local_path, token = dropbox_toke
 #'
 #' @section Foutafhandeling:
 #' Als het ophalen van de mapinhoud mislukt (bijv. map bestaat niet of geen
-#' leesrechten), gooit de functie een fout met de API-foutmelding. Individuele
-#' bestandsfouten worden doorgegeven vanuit [dropbox_download_file()].
+#' leesrechten), gooit de functie een fout. Individuele bestandsfouten worden
+#' afgevangen zodat de download doorgaat; mislukte bestanden worden aan het
+#' eind gemeld via [warning()].
 #' Een ongeldig `pattern`- of `welke`-argument geeft een fout voordat er
 #' downloads starten.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_download_file()] voor het downloaden van een enkel bestand.
+#' [RLdrop::dropbox_download_file()] voor het downloaden van een enkel bestand. \cr
+#' [RLdrop::dropbox_compare_folder()] om een lokale map te vergelijken met Dropbox.
 #'
 #' @export
 #'
@@ -234,6 +264,22 @@ dropbox_download_file <- function(dropbox_path, local_path, token = dropbox_toke
 #'   recursive      = TRUE
 #' )
 #'
+#' # Alleen ontbrekende bestanden downloaden
+#' dropbox_download_folder(
+#'   dropbox_folder = "/data/parquet",
+#'   local_folder   = "D:/lokaal/parquet",
+#'   recursive      = TRUE,
+#'   overwrite      = "missing"
+#' )
+#'
+#' # Alleen gewijzigde bestanden (grootte verschilt)
+#' dropbox_download_folder(
+#'   dropbox_folder = "/data/parquet",
+#'   local_folder   = "D:/lokaal/parquet",
+#'   recursive      = TRUE,
+#'   overwrite      = "changed"
+#' )
+#'
 #' # Alleen CSV-bestanden direct in de map downloaden
 #' dropbox_download_folder(
 #'   dropbox_folder = "/datasets/EODHD",
@@ -249,7 +295,10 @@ dropbox_download_file <- function(dropbox_path, local_path, token = dropbox_toke
 #' )
 #' }
 dropbox_download_folder <- function(dropbox_folder, local_folder, token = dropbox_token(),
-                                    recursive = FALSE, pattern = NULL, welke = NULL) {
+                                     recursive = FALSE, overwrite = "newer",
+                                     pattern = NULL, welke = NULL) {
+
+  overwrite <- match.arg(overwrite, choices = c("always", "missing", "changed", "newer"))
 
   selectie <- .validate_file_selection(pattern = pattern, welke = welke)
   pattern  <- selectie$pattern
@@ -258,7 +307,6 @@ dropbox_download_folder <- function(dropbox_folder, local_folder, token = dropbo
   # --- Fase 1: inventariseer alle items ---
   entries <- .list_folder_recursive(dropbox_folder, token, recursive)
 
-  # [ARCH] Splits entries in bestanden en mappen voor overzichtelijke verwerking
   file_entries   <- Filter(function(e) e[[".tag"]] == "file",   entries)
   folder_entries <- Filter(function(e) e[[".tag"]] == "folder", entries)
 
@@ -318,44 +366,89 @@ dropbox_download_folder <- function(dropbox_folder, local_folder, token = dropbo
     ))
   }
 
-  # [ARCH] Gebruik path_lower van de rootmap als prefix voor consistente vergelijking.
-  # Trailing slash verwijderen zodat substring() correct werkt voor alle subpaden.
   root_prefix_lower <- tolower(sub("/$", "", dropbox_folder))
 
   # Maak lokale hoofdmap aan
-  if (!dir.exists(local_folder)) dir.create(local_folder, recursive = TRUE)
+  local_folder_long <- .win_long_path(local_folder)
+  if (!dir.exists(local_folder_long)) dir.create(local_folder_long, recursive = TRUE)
 
   # Maak alle submappen aan voor het downloaden begint
   if (recursive && length(folder_entries) > 0) {
     for (folder in folder_entries) {
-      # [ARCH] path_lower geeft genormaliseerd pad; strip root prefix voor relatief pad
       rel_path  <- substring(folder$path_lower, nchar(root_prefix_lower) + 1)
       sub_local <- paste0(local_folder, gsub("/", .Platform$file.sep, rel_path))
-      if (!dir.exists(sub_local)) dir.create(sub_local, recursive = TRUE)
+      sub_long  <- .win_long_path(sub_local)
+      if (!dir.exists(sub_long)) dir.create(sub_long, recursive = TRUE)
     }
   }
 
   # --- Fase 2: download met voortgangsbalk ---
   pb         <- utils::txtProgressBar(min = 0, max = n_files, style = 3)
-  downloaded <- character(n_files)
+  downloaded <- character(0)
+  skipped    <- 0L
+  failed     <- character(0)
 
   for (i in seq_along(file_entries)) {
     entry <- file_entries[[i]]
 
     if (recursive) {
-      # [ARCH] path_lower voor consistent relatief pad; path_display voor API-aanroep
       rel_path   <- substring(entry$path_lower, nchar(root_prefix_lower) + 1)
       local_path <- paste0(local_folder, gsub("/", .Platform$file.sep, rel_path))
     } else {
       local_path <- file.path(local_folder, basename(entry$path_lower))
     }
 
-    dropbox_download_file(entry$path_display, local_path, token)
-    downloaded[[i]] <- local_path
+    # --- Overwrite-logica: controleer of we dit bestand moeten overslaan ---
+    if (overwrite != "always") {
+      local_long <- .win_long_path(local_path)
+      if (file.exists(local_long)) {
+        skip <- FALSE
+
+        if (overwrite == "missing") {
+          skip <- TRUE
+        } else if (overwrite == "changed") {
+          local_size <- file.info(local_long)$size
+          skip <- !is.na(local_size) && local_size == entry$size
+        } else if (overwrite == "newer") {
+          local_mtime <- file.info(local_long)$mtime
+          db_mtime    <- as.POSIXct(entry$client_modified,
+                                     format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
+          skip <- !is.na(local_mtime) && !is.na(db_mtime) && db_mtime <= local_mtime
+        }
+
+        if (skip) {
+          skipped <- skipped + 1L
+          utils::setTxtProgressBar(pb, i)
+          next
+        }
+      }
+    }
+
+    # --- Download met error handling ---
+    tryCatch({
+      dropbox_download_file(entry$path_display, local_path, token)
+      downloaded <- c(downloaded, local_path)
+    }, error = function(e) {
+      failed <<- c(failed, sprintf("  %s\n    %s", entry$path_display, conditionMessage(e)))
+    })
+
     utils::setTxtProgressBar(pb, i)
   }
 
   close(pb)
-  message(sprintf("\n[DROPBOX] %d bestand(en) gedownload naar %s", n_files, local_folder))
+
+  # --- Fase 3: samenvatting ---
+  message(sprintf(
+    "\n[DROPBOX] Klaar: %d gedownload, %d overgeslagen, %d mislukt (van %d totaal)",
+    length(downloaded), skipped, length(failed), n_files
+  ))
+
+  if (length(failed) > 0) {
+    warning(sprintf(
+      "[DROPBOX] %d bestand(en) niet gedownload:\n%s",
+      length(failed), paste(failed, collapse = "\n")
+    ), call. = FALSE)
+  }
+
   invisible(downloaded)
 }

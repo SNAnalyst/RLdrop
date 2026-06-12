@@ -8,7 +8,8 @@ dropbox_download_folder_zip(
   dropbox_folder,
   local_folder,
   token = dropbox_token(),
-  keep_zip = FALSE
+  keep_zip = FALSE,
+  overwrite = "newer"
 )
 }
 \arguments{
@@ -23,6 +24,10 @@ wordt automatisch een token opgehaald via \code{\link[=dropbox_token]{dropbox_to
 
 \item{keep_zip}{Logisch. Indien \code{TRUE}, worden de zip-bestanden na uitpakken
 bewaard. Standaard \code{FALSE}.}
+
+\item{overwrite}{Bepaalt welke bestanden uitgepakt worden als ze lokaal
+al bestaan. Wordt doorgegeven aan \code{\link[=dropbox_download_zip]{dropbox_download_zip()}}.
+Zie daar voor opties. Standaard \code{"newer"}.}
 }
 \value{
 Invisibly een character vector van lokale paden van uitgepakte mappen.
@@ -57,6 +62,13 @@ Zie \code{\link[=dropbox_token]{dropbox_token()}} voor het instellen van de beno
 dropbox_download_folder_zip(
   dropbox_folder = "/Datasets/EODHD/hulp",
   local_folder   = "D:/lokaal/hulp"
+)
+
+# Alleen nieuwere bestanden overschrijven
+dropbox_download_folder_zip(
+  dropbox_folder = "/Datasets/EODHD/hulp",
+  local_folder   = "D:/lokaal/hulp",
+  overwrite      = "newer"
 )
 }
 }

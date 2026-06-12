@@ -14,7 +14,7 @@
 #' @param query Zoekterm als character string, bijv. `"rapport"` of
 #'   `"2026 Q3"`. Dropbox zoekt op bestandsnaam en mapnaam.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #' @param path Optioneel pad om de zoekopdracht te beperken tot een specifieke
 #'   map, bijv. `"/data"`. Standaard `NULL` (doorzoekt hele Dropbox).
 #' @param max_results Maximum aantal resultaten. Standaard 100. Dropbox
@@ -47,12 +47,12 @@
 #' `max_results` is bereikt of er geen resultaten meer zijn.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_list_folder()] voor het listen van een specifieke map. \cr
-#' [dropbox_file_info()] voor metadata van een enkel bestand.
+#' [RLdrop::dropbox_list_folder()] voor het listen van een specifieke map. \cr
+#' [RLdrop::dropbox_file_info()] voor metadata van een enkel bestand.
 #'
 #' @export
 #'

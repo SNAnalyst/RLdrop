@@ -9,7 +9,7 @@
 #' @description
 #' Uploadt één bestand rechtstreeks via de Dropbox API v2. Geschikt voor
 #' bestanden kleiner dan 150MB. Voor grotere bestanden, gebruik
-#' [dropbox_upload_large_file()] of de automatische wrapper [dropbox_upload()].
+#' [RLdrop::dropbox_upload_large_file()] of de automatische wrapper [RLdrop::dropbox_upload()].
 #'
 #' @param local_path Volledig lokaal pad van het te uploaden bestand,
 #'   bijv. `"D:/data/bestand.parquet"`. Gooit een fout als het bestand
@@ -17,7 +17,7 @@
 #' @param dropbox_path Doelpad op Dropbox inclusief bestandsnaam,
 #'   bijv. `"/data/bestand.parquet"`. Moet beginnen met `/`.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #' @param mode Schrijfmodus als character string. Opties:
 #'   \describe{
 #'     \item{`"overwrite"`}{Overschrijft een bestaand bestand (standaard).}
@@ -31,19 +31,19 @@
 #' @details
 #' Gebruikt het `/2/files/upload` endpoint van de Dropbox Content API.
 #' De Dropbox API heeft een maximale bestandsgrootte van 150MB voor dit
-#' endpoint. Gebruik [dropbox_upload_large_file()] voor grotere bestanden,
-#' of [dropbox_upload()] als automatische wrapper die de keuze maakt op
+#' endpoint. Gebruik [RLdrop::dropbox_upload_large_file()] voor grotere bestanden,
+#' of [RLdrop::dropbox_upload()] als automatische wrapper die de keuze maakt op
 #' basis van bestandsgrootte.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()],
-#' die de credentials leest uit omgevingsvariabelen. Zie [dropbox_token()]
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()],
+#' die de credentials leest uit omgevingsvariabelen. Zie [RLdrop::dropbox_token()]
 #' voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_upload()] voor automatische keuze tussen gewone en chunked upload. \cr
-#' [dropbox_upload_large_file()] voor bestanden groter dan 150MB. \cr
-#' [dropbox_upload_folder()] voor het uploaden van een volledige map.
+#' [RLdrop::dropbox_upload()] voor automatische keuze tussen gewone en chunked upload. \cr
+#' [RLdrop::dropbox_upload_large_file()] voor bestanden groter dan 150MB. \cr
+#' [RLdrop::dropbox_upload_folder()] voor het uploaden van een volledige map.
 #'
 #' @export
 #'
@@ -62,7 +62,9 @@
 #' }
 dropbox_upload_file <- function(local_path, dropbox_path, token = dropbox_token(), mode = "overwrite") {
 
-  if (!file.exists(local_path)) {
+  local_long <- .win_long_path(local_path)
+
+  if (!file.exists(local_long)) {
     stop(sprintf("[DROPBOX] Lokaal bestand niet gevonden: %s", local_path))
   }
 
@@ -76,12 +78,12 @@ dropbox_upload_file <- function(local_path, dropbox_path, token = dropbox_token(
           path       = dropbox_path,
           mode       = mode,
           autorename = FALSE,
-          mute       = FALSE  # [ARCH] FALSE zodat Dropbox notificaties normaal werken
+          mute       = FALSE
         ),
         auto_unbox = TRUE
       )
     ),
-    body = httr::upload_file(local_path)
+    body = httr::upload_file(local_long)
   )
 
   if (httr::http_error(response)) {
@@ -104,14 +106,14 @@ dropbox_upload_file <- function(local_path, dropbox_path, token = dropbox_token(
 #' @description
 #' Uploadt bestanden groter dan 150MB naar Dropbox via de upload session API,
 #' waarbij het bestand in chunks wordt verstuurd. Toont voortgang per chunk.
-#' Voor kleinere bestanden is [dropbox_upload_file()] efficiënter.
+#' Voor kleinere bestanden is [RLdrop::dropbox_upload_file()] efficiënter.
 #'
 #' @param local_path Volledig lokaal pad van het te uploaden bestand.
 #'   Gooit een fout als het bestand niet bestaat.
 #' @param dropbox_path Doelpad op Dropbox inclusief bestandsnaam,
 #'   bijv. `"/data/groot_bestand.csv"`. Moet beginnen met `/`.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #' @param chunk_size Grootte van elk upload-chunk in bytes. Standaard 128MB
 #'   (`128 * 1024 * 1024`). Grotere chunks zijn sneller maar kwetsbaarder
 #'   voor netwerkfouten; kleinere chunks zijn robuuster maar langzamer.
@@ -146,13 +148,13 @@ dropbox_upload_file <- function(local_path, dropbox_path, token = dropbox_token(
 #' mislukte upload wordt niet automatisch hervat; start opnieuw bij fout.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_upload()] als automatische wrapper die kiest op bestandsgrootte. \cr
-#' [dropbox_upload_file()] voor bestanden kleiner dan 150MB. \cr
-#' [dropbox_upload_folder()] voor het uploaden van een volledige map.
+#' [RLdrop::dropbox_upload()] als automatische wrapper die kiest op bestandsgrootte. \cr
+#' [RLdrop::dropbox_upload_file()] voor bestanden kleiner dan 150MB. \cr
+#' [RLdrop::dropbox_upload_folder()] voor het uploaden van een volledige map.
 #'
 #' @export
 #'
@@ -175,15 +177,17 @@ dropbox_upload_large_file <- function(local_path, dropbox_path, token = dropbox_
                                        chunk_size = 128 * 1024 * 1024,
                                        mode = "overwrite") {
 
-  if (!file.exists(local_path)) {
+  local_long <- .win_long_path(local_path)
+
+  if (!file.exists(local_long)) {
     stop(sprintf("[DROPBOX] Lokaal bestand niet gevonden: %s", local_path))
   }
 
-  file_size <- file.info(local_path)$size
+  file_size <- file.info(local_long)$size
   message(sprintf("[DROPBOX] Start chunked upload: %s (%.1f MB)",
     basename(local_path), file_size / 1024 / 1024))
 
-  con <- file(local_path, "rb")
+  con <- file(local_long, "rb")
   on.exit(close(con))  # [ARCH] Altijd sluiten, ook bij fout
 
   # --- Stap 1: Start upload session ---
@@ -288,8 +292,8 @@ dropbox_upload_large_file <- function(local_path, dropbox_path, token = dropbox_
 #' Upload een bestand naar Dropbox, kiest automatisch gewone of chunked upload
 #'
 #' @description
-#' Automatische wrapper rond [dropbox_upload_file()] en
-#' [dropbox_upload_large_file()]. Bepaalt op basis van de bestandsgrootte
+#' Automatische wrapper rond [RLdrop::dropbox_upload_file()] en
+#' [RLdrop::dropbox_upload_large_file()]. Bepaalt op basis van de bestandsgrootte
 #' welke uploadmethode wordt gebruikt. Dit is de aanbevolen functie voor
 #' enkelvoudige uploads.
 #'
@@ -297,7 +301,7 @@ dropbox_upload_large_file <- function(local_path, dropbox_path, token = dropbox_
 #' @param dropbox_path Doelpad op Dropbox inclusief bestandsnaam.
 #'   Moet beginnen met `/`.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #' @param mode Schrijfmodus: `"overwrite"` (standaard), `"add"`, of `"update"`.
 #' @param large_file_threshold Drempel in bytes waarboven de chunked upload
 #'   session wordt gebruikt. Standaard 140MB (`140 * 1024 * 1024`).
@@ -308,18 +312,18 @@ dropbox_upload_large_file <- function(local_path, dropbox_path, token = dropbox_
 #' @details
 #' De keuze tussen uploadmethoden:
 #' \itemize{
-#'   \item Bestandsgrootte < `large_file_threshold`: [dropbox_upload_file()]
-#'   \item Bestandsgrootte >= `large_file_threshold`: [dropbox_upload_large_file()]
+#'   \item Bestandsgrootte < `large_file_threshold`: [RLdrop::dropbox_upload_file()]
+#'   \item Bestandsgrootte >= `large_file_threshold`: [RLdrop::dropbox_upload_large_file()]
 #' }
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_upload_file()] voor kleine bestanden. \cr
-#' [dropbox_upload_large_file()] voor grote bestanden. \cr
-#' [dropbox_upload_folder()] voor het uploaden van een volledige map.
+#' [RLdrop::dropbox_upload_file()] voor kleine bestanden. \cr
+#' [RLdrop::dropbox_upload_large_file()] voor grote bestanden. \cr
+#' [RLdrop::dropbox_upload_folder()] voor het uploaden van een volledige map.
 #'
 #' @export
 #'
@@ -342,7 +346,7 @@ dropbox_upload <- function(local_path, dropbox_path, token = dropbox_token(),
                             mode = "overwrite",
                             large_file_threshold = 140 * 1024 * 1024) {
 
-  file_size <- file.info(local_path)$size
+  file_size <- file.info(.win_long_path(local_path))$size
 
   if (file_size >= large_file_threshold) {
     dropbox_upload_large_file(local_path, dropbox_path, token, mode = mode)
@@ -356,22 +360,38 @@ dropbox_upload <- function(local_path, dropbox_path, token = dropbox_token(),
 #'
 #' @description
 #' Uploadt alle bestanden in een lokale map naar een Dropbox-map. Optioneel
-#' recursief voor submappen. Gebruikt [dropbox_upload()] per bestand, zodat
+#' recursief voor submappen. Gebruikt [RLdrop::dropbox_upload()] per bestand, zodat
 #' grote bestanden automatisch via chunked upload worden verstuurd.
+#'
+#' Individuele bestanden die niet geupload kunnen worden worden overgeslagen
+#' en aan het eind als waarschuwing gemeld, zodat de rest van de upload
+#' gewoon doorgaat.
 #'
 #' @param local_folder Lokale map waarvan de inhoud wordt geupload,
 #'   bijv. `"D:/data/parquet"`. Gooit een fout als de map niet bestaat.
 #' @param dropbox_folder Doelmap op Dropbox, bijv. `"/data/parquet"`.
 #'   Moet beginnen met `/`. De map hoeft niet al te bestaan op Dropbox.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #' @param recursive Logisch. Indien `TRUE`, worden bestanden in submappen
 #'   ook geupload en wordt de mapstructuur gerepliceerd op Dropbox.
 #'   Standaard `FALSE`.
 #' @param mode Schrijfmodus: `"overwrite"` (standaard), `"add"`, of `"update"`.
 #' @param large_file_threshold Drempel in bytes waarboven chunked upload
 #'   wordt gebruikt per bestand. Standaard 140MB. Doorgegeven aan
-#'   [dropbox_upload()].
+#'   [RLdrop::dropbox_upload()].
+#' @param overwrite Bepaalt welke bestanden geupload worden als ze al op
+#'   Dropbox staan:
+#'   \describe{
+#'     \item{`"always"`}{Upload alles, ongeacht wat er op Dropbox staat.}
+#'     \item{`"missing"`}{Sla bestanden over die al op Dropbox staan
+#'       (op basis van naam).}
+#'     \item{`"changed"`}{Upload alleen ontbrekende bestanden en bestanden
+#'       waarvan de grootte (bytes) verschilt.}
+#'     \item{`"newer"`}{Upload alleen ontbrekende bestanden en bestanden
+#'       waarvan de lokale versie nieuwer is dan de Dropbox-versie
+#'       (lokale `mtime` > `client_modified`) (standaard).}
+#'   }
 #' @param pattern Optioneel character string met een reguliere expressie.
 #'   Indien ingevuld worden alleen lokale bestanden geupload waarvan de
 #'   bestandsnaam (`basename()`) aan deze regex voldoet. Standaard `NULL`,
@@ -387,13 +407,15 @@ dropbox_upload <- function(local_path, dropbox_path, token = dropbox_token(),
 #'   zijn geupload.
 #'
 #' @details
-#' Gebruikt [list.files()] om lokale bestanden op te halen. Bij
-#' `recursive = TRUE` wordt het relatieve pad ten opzichte van `local_folder`
-#' berekend en gerepliceerd onder `dropbox_folder`, zodat de mapstructuur
-#' behouden blijft.
+#' Bij `overwrite` anders dan `"always"` wordt eerst de inhoud van de
+#' Dropbox-doelmap opgehaald om te bepalen welke bestanden overgeslagen
+#' kunnen worden. Dit kost een extra API-aanroep maar bespaart bandbreedte
+#' bij herhaalde uploads.
 #'
-#' Windows-backslashes in paden worden automatisch omgezet naar forward
-#' slashes voor compatibiliteit met de Dropbox API.
+#' Bij `recursive = TRUE` wordt het relatieve pad ten opzichte van
+#' `local_folder` berekend en gerepliceerd onder `dropbox_folder`, zodat
+#' de mapstructuur behouden blijft. Op Windows worden lange paden (>260
+#' tekens) automatisch afgehandeld.
 #'
 #' Als `pattern` of `welke` is ingevuld, wordt eerst de volledige lokale
 #' bestandslijst bepaald en daarna op bestandsnaam gefilterd. Als beide zijn
@@ -406,23 +428,20 @@ dropbox_upload <- function(local_path, dropbox_path, token = dropbox_token(),
 #' pad nodig blijkt, kan later een apart padgericht selectieargument worden
 #' toegevoegd.
 #'
-#' Bestanden die individueel mislukken worden overgeslagen met een
-#' `warning()`; de upload gaat verder met de overige bestanden. Aan het
-#' einde wordt een overzicht getoond van geslaagde en mislukte uploads.
-#'
 #' @section Foutafhandeling:
 #' Als `local_folder` niet bestaat, gooit de functie direct een fout.
 #' Per bestand worden fouten opgevangen via [tryCatch()]; mislukte bestanden
-#' worden verzameld en als `warning()` gerapporteerd na afloop.
+#' worden verzameld en als [warning()] gerapporteerd na afloop.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_upload()] voor het uploaden van een enkel bestand. \cr
-#' [dropbox_upload_large_file()] voor grote bestanden. \cr
-#' [dropbox_download_folder()] voor het downloaden van een map.
+#' [RLdrop::dropbox_upload()] voor het uploaden van een enkel bestand. \cr
+#' [RLdrop::dropbox_upload_large_file()] voor grote bestanden. \cr
+#' [RLdrop::dropbox_download_folder()] voor het downloaden van een map. \cr
+#' [RLdrop::dropbox_compare_folder()] om een lokale map te vergelijken met Dropbox.
 #'
 #' @export
 #'
@@ -441,9 +460,21 @@ dropbox_upload <- function(local_path, dropbox_path, token = dropbox_token(),
 #'   recursive      = TRUE
 #' )
 #'
-#' # Geuploadde paden opvangen
-#' geupload <- dropbox_upload_folder("D:/output", "/output", recursive = TRUE)
-#' message(sprintf("%d bestanden geupload", length(geupload)))
+#' # Alleen nieuwe of gewijzigde bestanden uploaden
+#' dropbox_upload_folder(
+#'   local_folder   = "D:/data",
+#'   dropbox_folder = "/data",
+#'   recursive      = TRUE,
+#'   overwrite      = "changed"
+#' )
+#'
+#' # Alleen ontbrekende bestanden uploaden
+#' dropbox_upload_folder(
+#'   local_folder   = "D:/data",
+#'   dropbox_folder = "/data",
+#'   recursive      = TRUE,
+#'   overwrite      = "missing"
+#' )
 #'
 #' # Alleen CSV-bestanden uploaden
 #' dropbox_upload_folder(
@@ -462,7 +493,9 @@ dropbox_upload <- function(local_path, dropbox_path, token = dropbox_token(),
 dropbox_upload_folder <- function(local_folder, dropbox_folder, token = dropbox_token(),
                                    recursive = FALSE, mode = "overwrite",
                                    large_file_threshold = 140 * 1024 * 1024,
-                                   pattern = NULL, welke = NULL) {
+                                   overwrite = "newer", pattern = NULL, welke = NULL) {
+
+  overwrite <- match.arg(overwrite, choices = c("always", "missing", "changed", "newer"))
 
   selectie <- .validate_file_selection(pattern = pattern, welke = welke)
   pattern  <- selectie$pattern
@@ -473,7 +506,7 @@ dropbox_upload_folder <- function(local_folder, dropbox_folder, token = dropbox_
   }
 
   files <- list.files(local_folder, full.names = TRUE, recursive = recursive)
-  files <- files[!file.info(files)$isdir]
+  files <- files[!file.info(.win_long_path(files))$isdir]
 
   # [ARCH] Selectiefiltering gebeurt op basename(), zodat het gedrag aansluit
   # bij dropbox_download_folder() en dropbox_delete(). Hierdoor selecteert
@@ -487,7 +520,9 @@ dropbox_upload_folder <- function(local_folder, dropbox_folder, token = dropbox_
     context_path = local_folder
   )
 
-  if (length(files) == 0) {
+  n_files <- length(files)
+
+  if (n_files == 0) {
     filter_omschrijving <- .describe_file_selection(pattern = pattern, welke = welke)
 
     if (identical(filter_omschrijving, "")) {
@@ -502,32 +537,94 @@ dropbox_upload_folder <- function(local_folder, dropbox_folder, token = dropbox_
     return(invisible(character(0)))
   }
 
+  message(sprintf("[DROPBOX] %d bestand(en) gevonden, uploaden gestart...", n_files))
+
+  # --- Dropbox-inhoud ophalen voor overwrite-check ---
+  dropbox_lookup <- list()
+  if (overwrite != "always") {
+    db_entries <- tryCatch(
+      .list_folder_recursive(dropbox_folder, token, recursive),
+      error = function(e) list()
+    )
+    file_entries <- Filter(function(e) e[[".tag"]] == "file", db_entries)
+
+    root_prefix_lower <- tolower(sub("/$", "", dropbox_folder))
+    for (entry in file_entries) {
+      rel_path <- substring(entry$path_lower, nchar(root_prefix_lower) + 1)
+      dropbox_lookup[[rel_path]] <- list(
+        size     = entry$size,
+        modified = entry$client_modified
+      )
+    }
+  }
+
+  # --- Upload met voortgangsbalk ---
+  pb       <- utils::txtProgressBar(min = 0, max = n_files, style = 3)
   uploaded <- character(0)
+  skipped  <- 0L
   failed   <- character(0)
 
-  for (local_path in files) {
-    # [ARCH] Relatief pad berekenen zodat mapstructuur behouden blijft op Dropbox
+  for (i in seq_along(files)) {
+    local_path    <- files[i]
     relative_path <- substring(local_path, nchar(local_folder) + 1)
-    relative_path <- gsub("\\\\", "/", relative_path)  # Windows backslashes naar forward slashes
+    relative_path <- gsub("\\\\", "/", relative_path)
     dropbox_path  <- paste0(dropbox_folder, relative_path)
 
+    # --- Overwrite-logica: controleer of we dit bestand moeten overslaan ---
+    if (overwrite != "always") {
+      rel_key <- tolower(relative_path)
+      db_info <- dropbox_lookup[[rel_key]]
+
+      if (!is.null(db_info)) {
+        skip      <- FALSE
+        local_long <- .win_long_path(local_path)
+
+        if (overwrite == "missing") {
+          skip <- TRUE
+        } else if (overwrite == "changed") {
+          local_size <- file.info(local_long)$size
+          skip <- !is.na(local_size) && local_size == db_info$size
+        } else if (overwrite == "newer") {
+          local_mtime <- file.info(local_long)$mtime
+          db_mtime    <- as.POSIXct(db_info$modified,
+                                     format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
+          skip <- !is.na(local_mtime) && !is.na(db_mtime) && local_mtime <= db_mtime
+        }
+
+        if (skip) {
+          skipped <- skipped + 1L
+          utils::setTxtProgressBar(pb, i)
+          next
+        }
+      }
+    }
+
+    # --- Upload met error handling ---
     tryCatch({
       dropbox_upload(local_path, dropbox_path, token,
                      mode                 = mode,
                      large_file_threshold = large_file_threshold)
       uploaded <- c(uploaded, dropbox_path)
     }, error = function(e) {
-      warning(sprintf("[DROPBOX] Overgeslagen vanwege fout: %s\n  %s", local_path, e$message))
-      failed <<- c(failed, local_path)
+      failed <<- c(failed, sprintf("  %s\n    %s", local_path, conditionMessage(e)))
     })
+
+    utils::setTxtProgressBar(pb, i)
   }
 
-  message(sprintf("[DROPBOX] %d/%d bestanden geupload naar %s",
-    length(uploaded), length(files), dropbox_folder))
+  close(pb)
+
+  # --- Samenvatting ---
+  message(sprintf(
+    "\n[DROPBOX] Klaar: %d geupload, %d overgeslagen, %d mislukt (van %d totaal)",
+    length(uploaded), skipped, length(failed), n_files
+  ))
 
   if (length(failed) > 0) {
-    warning(sprintf("[DROPBOX] %d bestanden mislukt:\n%s",
-      length(failed), paste(failed, collapse = "\n")))
+    warning(sprintf(
+      "[DROPBOX] %d bestand(en) niet geupload:\n%s",
+      length(failed), paste(failed, collapse = "\n")
+    ), call. = FALSE)
   }
 
   invisible(uploaded)

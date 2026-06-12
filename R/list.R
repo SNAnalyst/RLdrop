@@ -15,7 +15,7 @@
 #' @param dropbox_folder Pad naar de map op Dropbox, bijv. `"/data/parquet"`.
 #'   Moet beginnen met `/`. Gebruik `""` voor de root van je Dropbox.
 #' @param token Dropbox API access token als character string. Standaard
-#'   wordt automatisch een token opgehaald via [dropbox_token()].
+#'   wordt automatisch een token opgehaald via [RLdrop::dropbox_token()].
 #' @param recursive Logisch. Indien `TRUE`, worden submappen ook doorlopen.
 #'   Standaard `FALSE`.
 #' @param type Welke items retourneren: `"all"` (standaard) voor bestanden
@@ -43,12 +43,12 @@
 #' Dit komt het meest overeen met de lokale wijzigingsdatum van het bestand.
 #'
 #' @section Authenticatie:
-#' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
-#' Zie [dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
+#' Het token wordt standaard automatisch opgehaald via [RLdrop::dropbox_token()].
+#' Zie [RLdrop::dropbox_token()] voor het instellen van de benodigde omgevingsvariabelen.
 #'
 #' @seealso
-#' [dropbox_compare_folder()] om een lokale map te vergelijken met Dropbox. \cr
-#' [dropbox_download_folder()] om een Dropbox-map te downloaden.
+#' [RLdrop::dropbox_compare_folder()] om een lokale map te vergelijken met Dropbox. \cr
+#' [RLdrop::dropbox_download_folder()] om een Dropbox-map te downloaden.
 #'
 #' @export
 #'
