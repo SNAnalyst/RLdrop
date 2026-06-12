@@ -152,6 +152,16 @@ dropbox_download_file <- function(dropbox_path, local_path, token = dropbox_toke
 #'   wordt automatisch een token opgehaald via [dropbox_token()].
 #' @param recursive Logisch. Indien `TRUE`, worden submappen ook gedownload
 #'   en wordt de mapstructuur lokaal gerepliceerd. Standaard `FALSE`.
+#' @param pattern Optioneel character string met een reguliere expressie.
+#'   Indien ingevuld worden alleen bestanden gedownload waarvan de Dropbox-
+#'   bestandsnaam (`name` uit de Dropbox API) aan deze regex voldoet.
+#'   Standaard `NULL`, waarmee alle gevonden bestanden worden gedownload.
+#'   Het filter gebruikt base R [grepl()] en is hoofdlettergevoelig.
+#' @param welke Optioneel character vector met exacte bestandsnamen die
+#'   gedownload moeten worden, bijv. `c("A.txt", "B.txt", "C.R")`.
+#'   De waarden worden vergeleken met de Dropbox-bestandsnaam (`name` uit de
+#'   Dropbox API), niet met het volledige pad. Standaard `NULL`, waarmee niet
+#'   op exacte bestandsnamen wordt gefilterd.
 #'
 #' @return Invisibly een character vector van lokale paden van alle gedownloade
 #'   bestanden.
@@ -172,10 +182,33 @@ dropbox_download_file <- function(dropbox_path, local_path, token = dropbox_toke
 #' genormaliseerde lowercase variant) voor consistente vergelijking, en
 #' submappen worden aangemaakt voor het downloaden begint.
 #'
+#' Als `pattern` is ingevuld, wordt dit patroon alleen toegepast op de
+#' bestandsnaam, niet op het volledige Dropbox-pad. Dit is bewust gekozen omdat
+#' de meest voorkomende use case is: "download alleen `.csv`", "download alleen
+#' bestanden met `2026` in de naam", enzovoort. Gebruik bijvoorbeeld
+#' `pattern = "\\.csv$"` voor CSV-bestanden. Twijfelpunt voor later:
+#' als padgebaseerde filtering nodig blijkt, kan een apart argument zoals
+#' `pattern_scope = c("name", "path")` worden toegevoegd zonder deze interface
+#' te breken.
+#'
+#' Als `welke` is ingevuld, worden alleen bestanden gedownload waarvan de naam
+#' exact voorkomt in die vector. Als zowel `pattern` als `welke` zijn ingevuld,
+#' gebruikt de functie bewust een EN-filter: een bestand moet dus zowel aan de
+#' regex voldoen als in `welke` staan. Dit maakt gecombineerde selecties
+#' voorspelbaar, bijvoorbeeld `welke = c("A.csv", "B.txt")` samen met
+#' `pattern = "\\.csv$"` downloadt alleen `"A.csv"`.
+#'
+#' Twijfelpunt voor later: bij `recursive = TRUE` kan dezelfde bestandsnaam in
+#' meerdere submappen voorkomen. Omdat `welke` op bestandsnaam filtert, worden
+#' dan alle bestanden met die naam gedownload. Als onderscheid op pad nodig
+#' blijkt, kan later een apart padgericht selectieargument worden toegevoegd.
+#'
 #' @section Foutafhandeling:
 #' Als het ophalen van de mapinhoud mislukt (bijv. map bestaat niet of geen
 #' leesrechten), gooit de functie een fout met de API-foutmelding. Individuele
 #' bestandsfouten worden doorgegeven vanuit [dropbox_download_file()].
+#' Een ongeldig `pattern`- of `welke`-argument geeft een fout voordat er
+#' downloads starten.
 #'
 #' @section Authenticatie:
 #' Het token wordt standaard automatisch opgehaald via [dropbox_token()].
@@ -200,8 +233,27 @@ dropbox_download_file <- function(dropbox_path, local_path, token = dropbox_toke
 #'   local_folder   = "D:/lokaal/projecten/2026",
 #'   recursive      = TRUE
 #' )
+#'
+#' # Alleen CSV-bestanden direct in de map downloaden
+#' dropbox_download_folder(
+#'   dropbox_folder = "/datasets/EODHD",
+#'   local_folder   = "D:/lokaal/EODHD",
+#'   pattern        = "\\.csv$"
+#' )
+#'
+#' # Alleen expliciet genoemde bestanden downloaden
+#' dropbox_download_folder(
+#'   dropbox_folder = "/datasets/EODHD",
+#'   local_folder   = "D:/lokaal/EODHD",
+#'   welke          = c("A.txt", "B.txt", "C.R")
+#' )
 #' }
-dropbox_download_folder <- function(dropbox_folder, local_folder, token = dropbox_token(), recursive = FALSE) {
+dropbox_download_folder <- function(dropbox_folder, local_folder, token = dropbox_token(),
+                                    recursive = FALSE, pattern = NULL, welke = NULL) {
+
+  selectie <- .validate_file_selection(pattern = pattern, welke = welke)
+  pattern  <- selectie$pattern
+  welke    <- selectie$welke
 
   # --- Fase 1: inventariseer alle items ---
   entries <- .list_folder_recursive(dropbox_folder, token, recursive)
@@ -210,14 +262,61 @@ dropbox_download_folder <- function(dropbox_folder, local_folder, token = dropbo
   file_entries   <- Filter(function(e) e[[".tag"]] == "file",   entries)
   folder_entries <- Filter(function(e) e[[".tag"]] == "folder", entries)
 
+  # [ARCH] Selectiefiltering gebeurt NA het listen maar VOOR lokale mappen en
+  # downloads worden aangemaakt. Zo blijft de Dropbox API-call simpel en
+  # betrouwbaar, terwijl lokaal alleen werk wordt gedaan voor bestanden die
+  # daadwerkelijk binnen de selectie vallen.
+  #
+  # Keuze: filter op e$name in plaats van path_display. Dit voorkomt dat een
+  # mapnaam per ongeluk alle bestanden in die map selecteert. Voor de EODHD-
+  # vraag ("alleen files in deze folder, eventueel op extensie/naam of expliciete
+  # bestandslijst") is dat de veiligste standaard. Zie de roxygen-details voor
+  # het expliciete twijfelpunt rond mogelijk toekomstige padgebaseerde filtering.
+  file_entries <- .filter_dropbox_file_entries(
+    file_entries = file_entries,
+    pattern      = pattern,
+    welke        = welke,
+    context_path = dropbox_folder
+  )
+
+  # [ARCH] Als recursive = TRUE is, hoeven alleen mappen te worden aangemaakt
+  # die daadwerkelijk een geselecteerd bestand bevatten. Anders zou een brede
+  # recursieve listing alsnog lege submappen lokaal neerzetten.
+  if (recursive && length(folder_entries) > 0L && length(file_entries) > 0L) {
+    matched_file_paths <- vapply(file_entries, function(e) e$path_lower, character(1L))
+    folder_entries <- Filter(
+      function(e) any(startsWith(matched_file_paths, paste0(e$path_lower, "/"))),
+      folder_entries
+    )
+  } else if (recursive && length(file_entries) == 0L) {
+    folder_entries <- list()
+  }
+
   n_files <- length(file_entries)
+  filter_omschrijving <- .describe_file_selection(pattern = pattern, welke = welke)
 
   if (n_files == 0) {
-    message(sprintf("[DROPBOX] Geen bestanden gevonden in %s", dropbox_folder))
+    if (identical(filter_omschrijving, "")) {
+      message(sprintf("[DROPBOX] Geen bestanden gevonden in %s", dropbox_folder))
+    } else {
+      message(sprintf(
+        "[DROPBOX] Geen bestanden gevonden in %s die voldoen aan %s",
+        dropbox_folder,
+        filter_omschrijving
+      ))
+    }
     return(invisible(character(0)))
   }
 
-  message(sprintf("[DROPBOX] %d bestand(en) gevonden, downloaden gestart...", n_files))
+  if (identical(filter_omschrijving, "")) {
+    message(sprintf("[DROPBOX] %d bestand(en) gevonden, downloaden gestart...", n_files))
+  } else {
+    message(sprintf(
+      "[DROPBOX] %d bestand(en) gevonden voor %s, downloaden gestart...",
+      n_files,
+      filter_omschrijving
+    ))
+  }
 
   # [ARCH] Gebruik path_lower van de rootmap als prefix voor consistente vergelijking.
   # Trailing slash verwijderen zodat substring() correct werkt voor alle subpaden.

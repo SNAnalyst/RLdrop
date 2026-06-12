@@ -8,7 +8,9 @@ dropbox_download_folder(
   dropbox_folder,
   local_folder,
   token = dropbox_token(),
-  recursive = FALSE
+  recursive = FALSE,
+  pattern = NULL,
+  welke = NULL
 )
 }
 \arguments{
@@ -23,6 +25,18 @@ wordt automatisch een token opgehaald via \code{\link[=dropbox_token]{dropbox_to
 
 \item{recursive}{Logisch. Indien \code{TRUE}, worden submappen ook gedownload
 en wordt de mapstructuur lokaal gerepliceerd. Standaard \code{FALSE}.}
+
+\item{pattern}{Optioneel character string met een reguliere expressie.
+Indien ingevuld worden alleen bestanden gedownload waarvan de Dropbox-
+bestandsnaam (\code{name} uit de Dropbox API) aan deze regex voldoet.
+Standaard \code{NULL}, waarmee alle gevonden bestanden worden gedownload.
+Het filter gebruikt base R \code{\link[=grepl]{grepl()}} en is hoofdlettergevoelig.}
+
+\item{welke}{Optioneel character vector met exacte bestandsnamen die
+gedownload moeten worden, bijv. \code{c("A.txt", "B.txt", "C.R")}.
+De waarden worden vergeleken met de Dropbox-bestandsnaam (\code{name} uit de
+Dropbox API), niet met het volledige pad. Standaard \code{NULL}, waarmee niet
+op exacte bestandsnamen wordt gefilterd.}
 }
 \value{
 Invisibly een character vector van lokale paden van alle gedownloade
@@ -48,12 +62,35 @@ Bij \code{recursive = TRUE} wordt de volledige mapboomstructuur gerepliceerd in
 \code{local_folder}. Paden worden berekend via \code{path_lower} (de door Dropbox
 genormaliseerde lowercase variant) voor consistente vergelijking, en
 submappen worden aangemaakt voor het downloaden begint.
+
+Als \code{pattern} is ingevuld, wordt dit patroon alleen toegepast op de
+bestandsnaam, niet op het volledige Dropbox-pad. Dit is bewust gekozen omdat
+de meest voorkomende use case is: "download alleen \code{.csv}", "download alleen
+bestanden met \code{2026} in de naam", enzovoort. Gebruik bijvoorbeeld
+\code{pattern = "\\\\.csv$"} voor CSV-bestanden. Twijfelpunt voor later:
+als padgebaseerde filtering nodig blijkt, kan een apart argument zoals
+\code{pattern_scope = c("name", "path")} worden toegevoegd zonder deze interface
+te breken.
+
+Als \code{welke} is ingevuld, worden alleen bestanden gedownload waarvan de naam
+exact voorkomt in die vector. Als zowel \code{pattern} als \code{welke} zijn ingevuld,
+gebruikt de functie bewust een EN-filter: een bestand moet dus zowel aan de
+regex voldoen als in \code{welke} staan. Dit maakt gecombineerde selecties
+voorspelbaar, bijvoorbeeld \code{welke = c("A.csv", "B.txt")} samen met
+\code{pattern = "\\\\.csv$"} downloadt alleen \code{"A.csv"}.
+
+Twijfelpunt voor later: bij \code{recursive = TRUE} kan dezelfde bestandsnaam in
+meerdere submappen voorkomen. Omdat \code{welke} op bestandsnaam filtert, worden
+dan alle bestanden met die naam gedownload. Als onderscheid op pad nodig
+blijkt, kan later een apart padgericht selectieargument worden toegevoegd.
 }
 \section{Foutafhandeling}{
 
 Als het ophalen van de mapinhoud mislukt (bijv. map bestaat niet of geen
 leesrechten), gooit de functie een fout met de API-foutmelding. Individuele
 bestandsfouten worden doorgegeven vanuit \code{\link[=dropbox_download_file]{dropbox_download_file()}}.
+Een ongeldig \code{pattern}- of \code{welke}-argument geeft een fout voordat er
+downloads starten.
 }
 
 \section{Authenticatie}{
@@ -75,6 +112,20 @@ dropbox_download_folder(
   dropbox_folder = "/projecten/2026",
   local_folder   = "D:/lokaal/projecten/2026",
   recursive      = TRUE
+)
+
+# Alleen CSV-bestanden direct in de map downloaden
+dropbox_download_folder(
+  dropbox_folder = "/datasets/EODHD",
+  local_folder   = "D:/lokaal/EODHD",
+  pattern        = "\\\\.csv$"
+)
+
+# Alleen expliciet genoemde bestanden downloaden
+dropbox_download_folder(
+  dropbox_folder = "/datasets/EODHD",
+  local_folder   = "D:/lokaal/EODHD",
+  welke          = c("A.txt", "B.txt", "C.R")
 )
 }
 }

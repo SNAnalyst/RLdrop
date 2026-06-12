@@ -10,7 +10,9 @@ dropbox_upload_folder(
   token = dropbox_token(),
   recursive = FALSE,
   mode = "overwrite",
-  large_file_threshold = 140 * 1024 * 1024
+  large_file_threshold = 140 * 1024 * 1024,
+  pattern = NULL,
+  welke = NULL
 )
 }
 \arguments{
@@ -32,6 +34,18 @@ Standaard \code{FALSE}.}
 \item{large_file_threshold}{Drempel in bytes waarboven chunked upload
 wordt gebruikt per bestand. Standaard 140MB. Doorgegeven aan
 \code{\link[=dropbox_upload]{dropbox_upload()}}.}
+
+\item{pattern}{Optioneel character string met een reguliere expressie.
+Indien ingevuld worden alleen lokale bestanden geupload waarvan de
+bestandsnaam (\code{basename()}) aan deze regex voldoet. Standaard \code{NULL},
+waarmee alle gevonden bestanden worden geupload. Het filter gebruikt
+base R \code{\link[=grepl]{grepl()}} en is hoofdlettergevoelig.}
+
+\item{welke}{Optioneel character vector met exacte bestandsnamen die
+geupload moeten worden, bijv. \code{c("A.txt", "B.txt", "C.R")}.
+De waarden worden vergeleken met \code{basename()} van lokale bestanden, niet
+met het volledige lokale pad. Standaard \code{NULL}, waarmee niet op exacte
+bestandsnamen wordt gefilterd.}
 }
 \value{
 Invisibly een character vector van Dropbox-paden die succesvol
@@ -50,6 +64,17 @@ behouden blijft.
 
 Windows-backslashes in paden worden automatisch omgezet naar forward
 slashes voor compatibiliteit met de Dropbox API.
+
+Als \code{pattern} of \code{welke} is ingevuld, wordt eerst de volledige lokale
+bestandslijst bepaald en daarna op bestandsnaam gefilterd. Als beide zijn
+ingevuld, gebruikt de functie een EN-filter: een bestand moet dus zowel aan
+de regex voldoen als in \code{welke} staan.
+
+Twijfelpunt voor later: bij \code{recursive = TRUE} kan dezelfde bestandsnaam in
+meerdere submappen voorkomen. Omdat \code{welke} op bestandsnaam filtert, worden
+dan alle lokale bestanden met die naam geupload. Als onderscheid op relatief
+pad nodig blijkt, kan later een apart padgericht selectieargument worden
+toegevoegd.
 
 Bestanden die individueel mislukken worden overgeslagen met een
 \code{warning()}; de upload gaat verder met de overige bestanden. Aan het
@@ -86,6 +111,20 @@ dropbox_upload_folder(
 # Geuploadde paden opvangen
 geupload <- dropbox_upload_folder("D:/output", "/output", recursive = TRUE)
 message(sprintf("\%d bestanden geupload", length(geupload)))
+
+# Alleen CSV-bestanden uploaden
+dropbox_upload_folder(
+  local_folder   = "D:/output",
+  dropbox_folder = "/output",
+  pattern        = "\\\\.csv$"
+)
+
+# Alleen expliciet genoemde bestanden uploaden
+dropbox_upload_folder(
+  local_folder   = "D:/output",
+  dropbox_folder = "/output",
+  welke          = c("A.txt", "B.txt", "C.R")
+)
 }
 }
 \seealso{

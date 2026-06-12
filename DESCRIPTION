@@ -1,10 +1,10 @@
 Package: RLdrop
 Title: Direct Dropbox API Access via httr
-Version: 0.3.0
+Version: 0.3.1
 Authors@R:
     person("Roger", role = c("aut", "cre"), email = "your@email.com")
 Description: Provides functions to upload, download, list, search, compare,
-    move, delete and manage files and folders directly via the Dropbox API
+    copy, move, delete and manage files and folders directly via the Dropbox API
     v2, bypassing the Dropbox desktop client sync queue. Authentication is
     handled via OAuth2 refresh tokens for unattended use. Useful for
     on-demand access to specific files without waiting for the client to

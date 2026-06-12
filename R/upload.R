@@ -372,6 +372,16 @@ dropbox_upload <- function(local_path, dropbox_path, token = dropbox_token(),
 #' @param large_file_threshold Drempel in bytes waarboven chunked upload
 #'   wordt gebruikt per bestand. Standaard 140MB. Doorgegeven aan
 #'   [dropbox_upload()].
+#' @param pattern Optioneel character string met een reguliere expressie.
+#'   Indien ingevuld worden alleen lokale bestanden geupload waarvan de
+#'   bestandsnaam (`basename()`) aan deze regex voldoet. Standaard `NULL`,
+#'   waarmee alle gevonden bestanden worden geupload. Het filter gebruikt
+#'   base R [grepl()] en is hoofdlettergevoelig.
+#' @param welke Optioneel character vector met exacte bestandsnamen die
+#'   geupload moeten worden, bijv. `c("A.txt", "B.txt", "C.R")`.
+#'   De waarden worden vergeleken met `basename()` van lokale bestanden, niet
+#'   met het volledige lokale pad. Standaard `NULL`, waarmee niet op exacte
+#'   bestandsnamen wordt gefilterd.
 #'
 #' @return Invisibly een character vector van Dropbox-paden die succesvol
 #'   zijn geupload.
@@ -384,6 +394,17 @@ dropbox_upload <- function(local_path, dropbox_path, token = dropbox_token(),
 #'
 #' Windows-backslashes in paden worden automatisch omgezet naar forward
 #' slashes voor compatibiliteit met de Dropbox API.
+#'
+#' Als `pattern` of `welke` is ingevuld, wordt eerst de volledige lokale
+#' bestandslijst bepaald en daarna op bestandsnaam gefilterd. Als beide zijn
+#' ingevuld, gebruikt de functie een EN-filter: een bestand moet dus zowel aan
+#' de regex voldoen als in `welke` staan.
+#'
+#' Twijfelpunt voor later: bij `recursive = TRUE` kan dezelfde bestandsnaam in
+#' meerdere submappen voorkomen. Omdat `welke` op bestandsnaam filtert, worden
+#' dan alle lokale bestanden met die naam geupload. Als onderscheid op relatief
+#' pad nodig blijkt, kan later een apart padgericht selectieargument worden
+#' toegevoegd.
 #'
 #' Bestanden die individueel mislukken worden overgeslagen met een
 #' `warning()`; de upload gaat verder met de overige bestanden. Aan het
@@ -423,10 +444,29 @@ dropbox_upload <- function(local_path, dropbox_path, token = dropbox_token(),
 #' # Geuploadde paden opvangen
 #' geupload <- dropbox_upload_folder("D:/output", "/output", recursive = TRUE)
 #' message(sprintf("%d bestanden geupload", length(geupload)))
+#'
+#' # Alleen CSV-bestanden uploaden
+#' dropbox_upload_folder(
+#'   local_folder   = "D:/output",
+#'   dropbox_folder = "/output",
+#'   pattern        = "\\.csv$"
+#' )
+#'
+#' # Alleen expliciet genoemde bestanden uploaden
+#' dropbox_upload_folder(
+#'   local_folder   = "D:/output",
+#'   dropbox_folder = "/output",
+#'   welke          = c("A.txt", "B.txt", "C.R")
+#' )
 #' }
 dropbox_upload_folder <- function(local_folder, dropbox_folder, token = dropbox_token(),
                                    recursive = FALSE, mode = "overwrite",
-                                   large_file_threshold = 140 * 1024 * 1024) {
+                                   large_file_threshold = 140 * 1024 * 1024,
+                                   pattern = NULL, welke = NULL) {
+
+  selectie <- .validate_file_selection(pattern = pattern, welke = welke)
+  pattern  <- selectie$pattern
+  welke    <- selectie$welke
 
   if (!dir.exists(local_folder)) {
     stop(sprintf("[DROPBOX] Lokale map niet gevonden: %s", local_folder))
@@ -435,8 +475,30 @@ dropbox_upload_folder <- function(local_folder, dropbox_folder, token = dropbox_
   files <- list.files(local_folder, full.names = TRUE, recursive = recursive)
   files <- files[!file.info(files)$isdir]
 
+  # [ARCH] Selectiefiltering gebeurt op basename(), zodat het gedrag aansluit
+  # bij dropbox_download_folder() en dropbox_delete(). Hierdoor selecteert
+  # `welke = "A.txt"` bij recursive = TRUE alle bestanden met die naam in
+  # submappen. Dat is bewust gedocumenteerd; padgerichte selectie kan later als
+  # apart argument worden toegevoegd zonder deze interface te breken.
+  files <- .filter_local_files(
+    files        = files,
+    pattern      = pattern,
+    welke        = welke,
+    context_path = local_folder
+  )
+
   if (length(files) == 0) {
-    message(sprintf("[DROPBOX] Geen bestanden gevonden in %s", local_folder))
+    filter_omschrijving <- .describe_file_selection(pattern = pattern, welke = welke)
+
+    if (identical(filter_omschrijving, "")) {
+      message(sprintf("[DROPBOX] Geen bestanden gevonden in %s", local_folder))
+    } else {
+      message(sprintf(
+        "[DROPBOX] Geen bestanden gevonden in %s die voldoen aan %s",
+        local_folder,
+        filter_omschrijving
+      ))
+    }
     return(invisible(character(0)))
   }
 

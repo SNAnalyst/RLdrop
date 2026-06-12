@@ -4,17 +4,42 @@
 \alias{dropbox_delete}
 \title{Verwijder een bestand of map op Dropbox}
 \usage{
-dropbox_delete(dropbox_path, token = dropbox_token())
+dropbox_delete(
+  dropbox_path,
+  token = dropbox_token(),
+  recursive = FALSE,
+  pattern = NULL,
+  welke = NULL
+)
 }
 \arguments{
 \item{dropbox_path}{Pad op Dropbox van het te verwijderen item, bijv.
-\code{"/data/oud_bestand.csv"} of \code{"/temp"}. Moet beginnen met \code{/}.}
+\code{"/data/oud_bestand.csv"} of \code{"/temp"}. Moet beginnen met \code{/}.
+Als \code{pattern} of \code{welke} is ingevuld, wordt dit pad behandeld als map
+waarbinnen bestanden geselecteerd en verwijderd worden.}
 
 \item{token}{Dropbox API access token als character string. Standaard
 wordt automatisch een token opgehaald via \code{\link[=dropbox_token]{dropbox_token()}}.}
+
+\item{recursive}{Logisch. Alleen relevant als \code{pattern} of \code{welke} is
+ingevuld. Indien \code{TRUE}, worden ook bestanden in submappen van
+\code{dropbox_path} meegenomen in de selectie. Standaard \code{FALSE}.}
+
+\item{pattern}{Optioneel character string met een reguliere expressie.
+Indien ingevuld worden alleen bestanden verwijderd waarvan de Dropbox-
+bestandsnaam (\code{name} uit de Dropbox API) aan deze regex voldoet.
+Standaard \code{NULL}. Het filter gebruikt base R \code{\link[=grepl]{grepl()}} en is
+hoofdlettergevoelig.}
+
+\item{welke}{Optioneel character vector met exacte bestandsnamen die
+verwijderd moeten worden, bijv. \code{c("A.txt", "B.txt", "C.R")}.
+De waarden worden vergeleken met de Dropbox-bestandsnaam (\code{name} uit de
+Dropbox API), niet met het volledige pad. Standaard \code{NULL}.}
 }
 \value{
-Invisibly de metadata van het verwijderde item als lijst.
+Zonder \code{pattern} en \code{welke}: invisibly de metadata van het
+verwijderde item als lijst. Met \code{pattern} of \code{welke}: invisibly een lijst
+met metadata van alle verwijderde bestanden.
 }
 \description{
 Verwijdert een bestand of map (inclusief inhoud) op Dropbox. De verwijdering
@@ -27,7 +52,22 @@ map worden alle bestanden en submappen mee verwijderd. Items komen in de
 Dropbox prullenbak terecht en kunnen daar nog hersteld worden (afhankelijk
 van je Dropbox plan).
 
-Gooit een fout als het pad niet bestaat of bij onvoldoende rechten.
+Belangrijke veiligheidskeuze: als \code{pattern} of \code{welke} is ingevuld, verwijdert
+de functie nooit mappen. De functie haalt dan eerst bestandsentries op via
+de Dropbox \code{list_folder} API, filtert alleen items met \code{.tag == "file"}, en
+verwijdert daarna elk geselecteerd bestand afzonderlijk. Daardoor kan
+\code{dropbox_delete("/temp", pattern = "\\\\.csv$")} niet per ongeluk de hele map
+\code{"/temp"} verwijderen.
+
+Als zowel \code{pattern} als \code{welke} zijn ingevuld, gebruikt de functie een
+EN-filter: een bestand moet dus zowel aan de regex voldoen als in \code{welke}
+staan. Bij \code{recursive = TRUE} kan dezelfde bestandsnaam in meerdere submappen
+voorkomen; omdat \code{welke} op bestandsnaam filtert, worden dan alle bestanden
+met die naam verwijderd.
+
+Gooit een fout als het pad niet bestaat of bij onvoldoende rechten. Een
+ongeldig \code{pattern}- of \code{welke}-argument geeft een fout voordat er bestanden
+verwijderd worden.
 }
 \section{Authenticatie}{
 
@@ -47,6 +87,12 @@ dropbox_delete("/temp/oude_exports")
 if (dropbox_exists("/data/temp.csv")) {
   dropbox_delete("/data/temp.csv")
 }
+
+# Alleen CSV-bestanden direct in een map verwijderen
+dropbox_delete("/temp/exports", pattern = "\\\\.csv$")
+
+# Alleen expliciet genoemde bestanden direct in een map verwijderen
+dropbox_delete("/temp/exports", welke = c("A.txt", "B.txt", "C.R"))
 }
 }
 \seealso{
