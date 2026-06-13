@@ -142,9 +142,11 @@ dropbox_download_file <- function(dropbox_path, local_path, token = dropbox_toke
 .win_long_path <- function(path) {
   if (.Platform$OS.type != "windows") return(path)
   path <- normalizePath(path, winslash = "\\", mustWork = FALSE)
-  if (nchar(path) > 250 && !startsWith(path, "\\\\?\\")) {
-    path <- paste0("\\\\?\\", path)
-  }
+  # [ARCH] Vectorized: deze helper wordt ook met meerdere paden tegelijk
+  # aangeroepen (bv. file.info(.win_long_path(files))), dus elke padelement
+  # afzonderlijk toetsen in plaats van && op een vector (die faalt).
+  to_prefix <- nchar(path) > 250 & !startsWith(path, "\\\\?\\")
+  path[to_prefix] <- paste0("\\\\?\\", path[to_prefix])
   path
 }
 
