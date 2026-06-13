@@ -1,6 +1,6 @@
 Package: RLdrop
 Title: Direct Dropbox API Access via httr
-Version: 0.6.0
+Version: 0.6.1
 Authors@R:
     person("Roger", role = c("aut", "cre"), email = "your@email.com")
 Description: Provides functions to upload, download, list, search, compare,
